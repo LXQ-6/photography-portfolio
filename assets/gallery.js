@@ -291,7 +291,8 @@ window.GALLERY_API_URL = "/api/photos";
 
   loadData().then(data => {
     site = data.site || {};
-    photos = data.photos || [];
+    // 作品数据优先读 photos-data.js（admin.html 管理页维护），兼容旧版 data.js 内嵌数据
+    photos = window.GALLERY_PHOTOS || data.photos || [];
     renderSite();
     renderFilters();
     renderProjects();

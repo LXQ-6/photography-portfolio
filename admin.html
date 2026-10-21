@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>作品管理 · 拾光影集</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#161310;--bg-raise:#1e1a16;--bg-soft:#221d18;
+  --ink:#e9e2d6;--ink-dim:#a89e8e;--ink-faint:#6f665a;
+  --line:rgba(233,226,214,.13);--line-strong:rgba(233,226,214,.28);
+  --accent:#c99e63;--accent-deep:#9a7443;--danger:#c96b63;
+  --serif:"Noto Serif SC",serif;--sans:"Noto Sans SC",sans-serif;
+  --ease:cubic-bezier(.22,.61,.36,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-weight:300;line-height:1.7;letter-spacing:.02em;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+a:hover{color:var(--ink)}
+.wrap{max-width:960px;margin:0 auto;padding:2.5rem clamp(1.2rem,4vw,3rem) 5rem}
+header.top{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;border-bottom:1px solid var(--line);padding-bottom:1.2rem;margin-bottom:2rem;flex-wrap:wrap}
+header.top h1{font-family:var(--serif);font-size:1.5rem;font-weight:600;letter-spacing:.14em}
+header.top .en{font-size:.72rem;letter-spacing:.3em;color:var(--accent)}
+header.top a.back{font-size:.8rem;color:var(--ink-dim)}
+h2.sec{font-family:var(--serif);font-size:1.05rem;font-weight:600;letter-spacing:.14em;margin:2.4rem 0 1rem;display:flex;align-items:center;gap:.8rem}
+h2.sec::after{content:"";flex:1;height:1px;background:var(--line)}
+h2.sec .no{font-size:.72rem;letter-spacing:.28em;color:var(--accent)}
+.tip{font-size:.8rem;color:var(--ink-faint);line-height:1.9}
+.tip b{color:var(--ink-dim);font-weight:400}
+
+/* 表单控件 */
+input[type=text],input[type=password],select,textarea{
+  width:100%;background:var(--bg-raise);border:1px solid var(--line);color:var(--ink);
+  padding:.55rem .8rem;font-size:.9rem;font-family:inherit;border-radius:2px;transition:border-color .3s;
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+textarea{resize:vertical;min-height:3.2em}
+label.f{display:block;font-size:.74rem;letter-spacing:.18em;color:var(--ink-faint);margin:.8rem 0 .3rem}
+button{
+  background:transparent;border:1px solid var(--line-strong);color:var(--ink);
+  padding:.5rem 1.2rem;font-size:.84rem;letter-spacing:.14em;border-radius:2px;cursor:pointer;
+  font-family:inherit;transition:all .3s var(--ease);
+}
+button:hover{border-color:var(--accent);color:var(--accent)}
+button.primary{background:var(--ink);color:#1a150f;border-color:var(--ink);font-weight:500}
+button.primary:hover{background:var(--accent);border-color:var(--accent);color:#1a150f}
+button.danger{color:var(--danger);border-color:rgba(201,107,99,.4)}
+button.danger:hover{border-color:var(--danger)}
+button:disabled{opacity:.45;cursor:not-allowed}
+
+/* 令牌区 */
+.token-box{background:var(--bg-raise);border:1px solid var(--line);border-radius:2px;padding:1.2rem 1.4rem}
+.token-row{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center}
+.token-row input{flex:1;min-width:220px}
+details.help{margin-top:.8rem;font-size:.78rem;color:var(--ink-faint)}
+details.help summary{cursor:pointer;color:var(--ink-dim)}
+details.help ol{margin:.6rem 0 .6rem 1.2em;line-height:2}
+.status{margin-top:.8rem;font-size:.82rem;letter-spacing:.06em}
+.status.ok{color:#8fbf7f}.status.err{color:var(--danger)}
+
+/* 作品卡片 */
+.card{background:var(--bg-raise);border:1px solid var(--line);border-radius:2px;padding:1.2rem 1.4rem;margin-bottom:1.2rem}
+.card-head{display:flex;align-items:center;gap:.9rem;margin-bottom:.6rem;flex-wrap:wrap}
+.card-head img{width:88px;height:60px;object-fit:cover;border:1px solid var(--line);background:var(--bg-soft)}
+.card-head .t{flex:1;min-width:140px}
+.card-head .t b{font-family:var(--serif);font-size:1.02rem;font-weight:600;letter-spacing:.08em}
+.card-head .t small{display:block;color:var(--ink-faint);font-size:.72rem;letter-spacing:.1em}
+.card-head .ops{display:flex;gap:.4rem;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.2rem 1rem}
+.grid .wide{grid-column:1/-1}
+.file-note{font-size:.76rem;color:var(--accent);margin-top:.3rem}
+.pending-img{max-width:100%;max-height:180px;border:1px solid var(--line);margin-top:.5rem}
+
+/* 操作条 */
+.actions{position:sticky;bottom:0;background:linear-gradient(rgba(22,19,16,0),rgba(22,19,16,.9) 30%);padding:1.6rem 0 .8rem;display:flex;gap:.8rem;align-items:center;flex-wrap:wrap}
+.spin{display:inline-block;width:.9em;height:.9em;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;vertical-align:-2px;animation:sp 1s linear infinite;margin-right:.4em}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media(max-width:640px){.card{padding:1rem}header.top h1{font-size:1.2rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <h1>作品管理</h1>
+      <span class="en">PHOTO ADMIN · 拾光影集</span>
+    </div>
+    <a class="back" href="index.html">← 返回作品集</a>
+  </header>
+
+  <!-- 令牌 -->
+  <h2 class="sec"><span class="no">00</span>连接 GitHub</h2>
+  <div class="token-box">
+    <div class="token-row">
+      <input type="password" id="token" placeholder="粘贴 GitHub Personal Access Token（仅保存在本浏览器）">
+      <button id="btn-connect" class="primary">连接</button>
+      <button id="btn-forget">清除令牌</button>
+    </div>
+    <p class="status" id="token-status"></p>
+    <details class="help">
+      <summary>如何获取令牌？（首次使用需约 1 分钟）</summary>
+      <ol>
+        <li>打开 github.com → 右上角头像 → <b>Settings</b> → 左侧最底部 <b>Developer settings</b></li>
+        <li><b>Personal access tokens → Fine-grained tokens</b> → <b>Generate new token</b></li>
+        <li>Token name 随意；<b>Repository access</b> 选 <b>Only select repositories</b> → 勾选 <b>photography-portfolio</b></li>
+        <li><b>Permissions → Repository permissions → Contents</b> 设为 <b>Read and write</b></li>
+        <li>生成后复制令牌（ghp_ 开头），粘贴到上方输入框点"连接"。令牌只存在你的浏览器本地，不会上传到任何地方</li>
+      </ol>
+    </details>
+  </div>
+
+  <!-- 作品列表 -->
+  <h2 class="sec"><span class="no">01</span>作品列表 <span class="tip" id="count-line"></span></h2>
+  <div id="cards"></div>
+
+  <!-- 新增 -->
+  <h2 class="sec"><span class="no">02</span>新增作品</h2>
+  <div class="card" id="add-card">
+    <label class="f">照片文件（jpg / png / webp，原图直接上传，不做压缩）</label>
+    <input type="file" id="add-file" accept="image/jpeg,image/png,image/webp">
+    <div id="add-preview"></div>
+    <div class="grid">
+      <div><label class="f">作品标题 *</label><input type="text" id="add-title"></div>
+      <div><label class="f">英文标题（可选）</label><input type="text" id="add-en"></div>
+      <div><label class="f">分类 / 类型 *</label><input type="text" id="add-category" list="cat-list" placeholder="如：风光"><datalist id="cat-list"></datalist></div>
+      <div><label class="f">拍摄地点</label><input type="text" id="add-place"></div>
+      <div><label class="f">拍摄时间（如 2026-05）</label><input type="text" id="add-date"></div>
+      <div><label class="f">相机 / 器材</label><input type="text" id="add-camera"></div>
+      <div><label class="f">镜头（可选）</label><input type="text" id="add-lens"></div>
+      <div><label class="f">光圈 / 快门 / ISO（可选，如 f/8 · 1/125s · ISO100）</label><input type="text" id="add-exif-extra"></div>
+    </div>
+    <label class="f">作品简介</label>
+    <textarea id="add-desc"></textarea>
+    <p style="margin-top:1rem"><button id="btn-add" class="primary">＋ 加入待保存列表</button></p>
+  </div>
+
+  <!-- 保存 -->
+  <div class="actions">
+    <button id="btn-save" class="primary">保存全部更改并发布</button>
+    <button id="btn-reload">放弃修改，重新加载</button>
+    <span class="status" id="save-status"></span>
+  </div>
+
+  <p class="tip" style="margin-top:1.5rem">保存后 GitHub Pages 约 1 分钟自动重建，期间线上站点可能短暂显示旧内容，属正常现象。<br>
+  画幅（横/竖）在上传照片时按宽高自动判断；如需调整可编辑 photos-data.js 里的 ar 字段。</p>
+</div>
+
+<script src="assets/photos-data.js"></script>
+<script>
+(function(){
+"use strict";
+const CFG = { owner:"LXQ-6", repo:"photography-portfolio", branch:"main", dataPath:"assets/photos-data.js", photoDir:"photos/" };
+const $ = (id) => document.getElementById(id);
+let token = localStorage.getItem("gh_pat") || "";
+let photos = [];        // 工作副本：{src,title,en,category,place,ar,desc,exif}
+let shas = {};          // 文件路径 -> sha（更新/删除需要）
+let newImages = {};     // 临时索引 -> {filename, contentB64}
+let pendingNew = [];    // 待新增条目
+let removed = [];       // 待删除条目（含图片路径）
+let dirty = false;
+
+const b64dec = (b64) => decodeURIComponent(escape(atob(b64.replace(/\n/g,""))));
+const b64enc = (str) => btoa(unescape(encodeURIComponent(str)));
+
+/* ---------- GitHub API ---------- */
+async function gh(path, opts = {}) {
+  const res = await fetch(`https://api.github.com/repos/${CFG.owner}/${CFG.repo}/contents/${path}${opts.qs ? "?" + opts.qs : ""}`, {
+    method: opts.method || "GET",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Accept": "application/vnd.github+json",
+      "Content-Type": "application/json"
+    },
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`${res.status} ${err.message || res.statusText}`);
+  }
+  return res.status === 200 ? res.json() : null;
+}
+const getDataFile = () => gh(CFG.dataPath, { qs: "ref=" + CFG.branch });
+const getPhotoSha = (src) => gh(src, { qs: "ref=" + CFG.branch }).then(f => f.sha).catch(() => null);
+const putFile = (path, message, content, sha) => gh(path, { method: "PUT", body: { message, content, branch: CFG.branch, ...(sha ? { sha } : {}) } });
+const delFile = (path, message, sha) => gh(path, { method: "DELETE", body: { message, branch: CFG.branch, sha } });
+
+/* ---------- 状态提示 ---------- */
+function setStatus(el, text, cls) { el.className = "status " + (cls || ""); el.innerHTML = text; }
+
+/* ---------- 令牌 ---------- */
+$("token").value = token;
+$("btn-connect").addEventListener("click", () => {
+  token = $("token").value.trim();
+  if (!token) return setStatus($("token-status"), "请先粘贴令牌", "err");
+  localStorage.setItem("gh_pat", token);
+  setStatus($("token-status"), '<span class="spin"></span>正在验证令牌并读取数据…');
+  loadDataFile();
+});
+$("btn-forget").addEventListener("click", () => {
+  localStorage.removeItem("gh_pat"); token = ""; $("token").value = "";
+  setStatus($("token-status"), "已清除本浏览器保存的令牌");
+});
+
+/* ---------- 载入数据 ---------- */
+async function loadDataFile() {
+  try {
+    const f = await getDataFile();
+    shas[CFG.dataPath] = f.sha;
+    const text = b64dec(f.content);
+    const json = text.slice(text.indexOf("=") + 1).trim().replace(/;\s*$/, "");
+    photos = JSON.parse(json);
+    localStorage.setItem("gh_pat", token);
+    setStatus($("token-status"), `✓ 连接成功，已读取 ${photos.length} 件作品`, "ok");
+    renderCards();
+    renderCatList();
+  } catch (e) {
+    setStatus($("token-status"), "连接失败：" + e.message + "（请检查令牌是否有效、是否勾选了 photography-portfolio 仓库与 Contents 读写权限）", "err");
+  }
+}
+
+/* ---------- 渲染作品卡片 ---------- */
+function renderCards() {
+  $("count-line").textContent = `共 ${photos.length} 件`;
+  const box = $("cards");
+  box.innerHTML = "";
+  photos.forEach((p, i) => {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <div class="card-head">
+        <img src="${p.src}" alt="" loading="lazy" id="thumb-${i}">
+        <div class="t"><b contenteditable="true" data-k="title" data-i="${i}">${p.title || ""}</b>
+          <small>${p.src.split("/").pop()} · ${p.category || "未分类"}</small></div>
+        <div class="ops">
+          <label style="cursor:pointer"><input type="file" accept="image/jpeg,image/png,image/webp" hidden data-replace="${i}">替换图片</label>
+          <button class="danger" data-del="${i}">删除作品</button>
+        </div>
+      </div>
+      <div class="grid">
+        <div><label class="f">英文标题</label><input type="text" data-k="en" data-i="${i}" value="${(p.en||"").replace(/"/g,"&quot;")}"></div>
+        <div><label class="f">分类 / 类型</label><input type="text" data-k="category" data-i="${i}" value="${p.category||""}" list="cat-list"></div>
+        <div><label class="f">拍摄地点</label><input type="text" data-k="place" data-i="${i}" value="${p.place||""}"></div>
+        <div><label class="f">拍摄时间</label><input type="text" data-k="date" data-i="${i}" value="${(p.exif&&p.exif.date)||""}"></div>
+        <div><label class="f">相机 / 器材</label><input type="text" data-k="camera" data-i="${i}" value="${(p.exif&&p.exif.camera)||""}"></div>
+        <div><label class="f">镜头</label><input type="text" data-k="lens" data-i="${i}" value="${(p.exif&&p.exif.lens)||""}"></div>
+        <div><label class="f">光圈 / 快门 / ISO</label><input type="text" data-k="extra" data-i="${i}" value="${(p.exif&&p.exif.focal?p.exif.focal+" ":"")+(p.exif&&p.exif.aperture||"")} ${(p.exif&&p.exif.shutter)||""} ${(p.exif&&p.exif.iso?"ISO"+p.exif.iso:"")}"></div>
+        <div class="wide"><label class="f">作品简介</label><textarea data-k="desc" data-i="${i}">${p.desc||""}</textarea></div>
+      </div>
+      <div class="file-note" id="note-${i}"></div>`;
+    box.appendChild(card);
+  });
+
+  // 字段修改 → 写回工作副本
+  box.querySelectorAll("[data-k]").forEach(inp => {
+    inp.addEventListener("change", () => {
+      const i = +inp.dataset.i, k = inp.dataset.k, v = inp.value.trim();
+      if (k === "date" || k === "camera" || k === "lens" || k === "extra") {
+        photos[i].exif = photos[i].exif || {};
+        if (k === "date") photos[i].exif.date = v;
+        else if (k === "camera") photos[i].exif.camera = v;
+        else if (k === "lens") photos[i].exif.lens = v;
+        else {
+          const parts = v.split(/[,·/]+/).map(s => s.trim()).filter(Boolean);
+          photos[i].exif.focal = parts.find(s => /mm/.test(s)) || "";
+          photos[i].exif.aperture = parts.find(s => /^f\//.test(s)) || "";
+          photos[i].exif.shutter = parts.find(s => /s$/.test(s) && !/^f\//.test(s) && /\d/.test(s)) || "";
+          photos[i].exif.iso = (v.match(/iso\s*(\d+)/i) || [])[1] || "";
+        }
+      } else {
+        photos[i][k] = v;
+      }
+      if (k === "title") { const b = box.querySelector(`.card-head b[data-i="${i}"]`); if (b) b.textContent = v; }
+      dirty = true;
+    });
+  });
+
+  // 替换图片
+  box.querySelectorAll("[data-replace]").forEach(inp => {
+    inp.addEventListener("change", async () => {
+      const i = +inp.dataset.replace;
+      const file = inp.files[0];
+      if (!file) return;
+      try {
+        const { filename, contentB64, width, height } = await readImage(file);
+        newImages[i] = { filename, contentB64 };
+        photos[i].ar = width > height ? "16/10" : "4/5";
+        $("thumb-" + i).src = URL.createObjectURL(file);
+        $("note-" + i).textContent = `已选新图 ${filename}（保存时上传）`;
+        dirty = true;
+      } catch (e) { alert("读取图片失败：" + e.message); }
+    });
+  });
+
+  // 删除作品
+  box.querySelectorAll("[data-del]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const i = +btn.dataset.del;
+      if (!confirm(`确定删除《${photos[i].title || "未命名"}》？照片文件也会一并删除。`)) return;
+      removed.push(photos[i]);
+      photos.splice(i, 1);
+      dirty = true;
+      renderCards();
+    });
+  });
+}
+
+function renderCatList() {
+  const cats = [...new Set(photos.map(p => p.category).filter(Boolean))];
+  // 未连接令牌时用本地数据预填分类建议
+  const fallback = window.GALLERY_PHOTOS || [];
+  const all = cats.length ? cats : [...new Set(fallback.map(p => p.category).filter(Boolean))];
+  $("cat-list").innerHTML = all.map(c => `<option value="${c}">`).join("");
+}
+
+/* ---------- 读取图片文件 ---------- */
+function readImage(file) {
+  return new Promise((resolve, reject) => {
+    if (file.size > 40 * 1024 * 1024) return reject(new Error("文件超过 40MB，GitHub 接口不支持，请先压缩"));
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      const contentB64 = dataUrl.split(",")[1];
+      const img = new Image();
+      img.onload = () => {
+        const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+        const filename = CFG.photoDir + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
+        resolve({ filename, contentB64, width: img.naturalWidth, height: img.naturalHeight });
+      };
+      img.onerror = () => reject(new Error("无法解析图片"));
+      img.src = dataUrl;
+    };
+    reader.onerror = () => reject(new Error("文件读取失败"));
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ---------- 新增作品 ---------- */
+let addInfo = null;   // 当前选中的新图片信息
+$("add-file").addEventListener("change", async () => {
+  const file = $("add-file").files[0];
+  if (!file) { addInfo = null; $("add-preview").innerHTML = ""; return; }
+  try {
+    addInfo = await readImage(file);
+    $("add-preview").innerHTML = `<img class="pending-img" src="${URL.createObjectURL(file)}">` +
+      `<p class="file-note">已选 ${file.name}（${addInfo.width}×${addInfo.height}，${addInfo.width > addInfo.height ? "横幅" : "竖幅"}），填写上方信息后点"加入待保存列表"</p>`;
+  } catch (e) { addInfo = null; alert(e.message); }
+});
+$("btn-add").addEventListener("click", () => {
+  if (!addInfo) return alert("请先选择照片文件");
+  const title = $("add-title").value.trim();
+  if (!title) return alert("请填写作品标题");
+  const category = $("add-category").value.trim();
+  if (!category) return alert("请填写分类（如：风光）");
+  const extra = $("add-exif-extra").value.trim();
+  const parts = extra.split(/[,·/]+/).map(s => s.trim()).filter(Boolean);
+  pendingNew.push({
+    info: addInfo,
+    meta: {
+      title, en: $("add-en").value.trim(), category,
+      place: $("add-place").value.trim(), desc: $("add-desc").value.trim(),
+      ar: addInfo.width > addInfo.height ? "16/10" : "4/5",
+      exif: {
+        camera: $("add-camera").value.trim(), lens: $("add-lens").value.trim(),
+        focal: parts.find(s => /mm/.test(s)) || "",
+        aperture: parts.find(s => /^f\//.test(s)) || "",
+        shutter: parts.find(s => /s$/.test(s) && !/^f\//.test(s) && /\d/.test(s)) || "",
+        iso: (extra.match(/iso\s*(\d+)/i) || [])[1] || "",
+        date: $("add-date").value.trim()
+      }
+    }
+  });
+  setStatus($("save-status"), `《${title}》已加入待保存列表（共 ${pendingNew.length} 件新增）`, "ok");
+  ["add-title","add-en","add-category","add-place","add-date","add-camera","add-lens","add-exif-extra","add-desc"].forEach(id => $(id).value = "");
+  $("add-file").value = ""; $("add-preview").innerHTML = "";
+  addInfo = null;
+});
+
+/* ---------- 保存全部 ---------- */
+$("btn-save").addEventListener("click", async () => {
+  if (!token) return setStatus($("save-status"), "请先连接 GitHub", "err");
+  if (!pendingNew.length && !removed.length && !dirty) return setStatus($("save-status"), "没有需要保存的更改");
+  const btn = $("btn-save");
+  btn.disabled = true;
+  try {
+    let step = 0, total = pendingNew.length + removed.length + 1;
+    // 1. 上传新图（含替换的新图）
+    for (const item of pendingNew) {
+      step++;
+      setStatus($("save-status"), `<span class="spin"></span>上传照片 ${step}/${total}：${item.meta.title}`);
+      await putFile(item.info.filename, `新增作品：${item.meta.title}`, item.info.contentB64);
+      photos.push({ src: item.info.filename, ...item.meta });
+    }
+    for (const i of Object.keys(newImages)) {
+      step++;
+      setStatus($("save-status"), `<span class="spin"></span>上传替换图 ${step}/${total}`);
+      await putFile(newImages[i].filename, `替换作品图：${photos[i].title || ""}`, newImages[i].contentB64);
+      photos[i].src = newImages[i].filename;
+    }
+    // 2. 删除旧图
+    for (const p of removed) {
+      step++;
+      setStatus($("save-status"), `<span class="spin"></span>删除照片 ${step}/${total}`);
+      const sha = await getPhotoSha(p.src);
+      if (sha) await delFile(p.src, `删除作品：${p.title || p.src}`, sha);
+    }
+    // 3. 写回数据文件
+    setStatus($("save-status"), `<span class="spin"></span>发布数据文件 ${total}/${total}`);
+    const dataContent = "window.GALLERY_PHOTOS = " + JSON.stringify(photos, null, 2) + ";\n";
+    await putFile(CFG.dataPath, `更新作品数据（共 ${photos.length} 件）`, b64enc(dataContent), shas[CFG.dataPath]);
+    setStatus($("save-status"), `✓ 已发布！GitHub Pages 约 1 分钟后自动更新线上站点`, "ok");
+    pendingNew = []; removed = []; newImages = {}; dirty = false;
+    loadDataFile();
+  } catch (e) {
+    setStatus($("save-status"), "保存失败：" + e.message, "err");
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+$("btn-reload").addEventListener("click", () => {
+  if (dirty && !confirm("放弃当前所有未保存的修改？")) return;
+  pendingNew = []; removed = []; newImages = {}; dirty = false;
+  loadDataFile();
+  setStatus($("save-status"), "");
+});
+
+/* ---------- 启动 ---------- */
+renderCatList();   // 未连接时先用本地数据预填分类建议
+if (token) { setStatus($("token-status"), '<span class="spin"></span>正在用已保存的令牌连接…'); loadDataFile(); }
+})();
+</script>
+</body>
+</html>
