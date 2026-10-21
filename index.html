@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>拾光影集｜李旭琪摄影作品集</title>
+<meta name="description" content="李旭琪的个人摄影作品集——风光、城市、人像与人文的拍摄与记录。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<!-- 胶片颗粒质感层 -->
+<div class="grain" aria-hidden="true"></div>
+
+<!-- 导航 -->
+<nav class="nav" id="nav" aria-label="主导航">
+  <a class="logo" href="#top">拾光影集<span id="logo-en">GALLERY</span></a>
+  <div class="nav-links">
+    <a href="#works"><em>01</em>作品</a>
+    <a href="#about"><em>02</em>关于</a>
+  </div>
+</nav>
+
+<!-- Hero 封面 -->
+<header class="hero" id="top">
+  <div class="hero-bg">
+    <img id="hero-bg" src="" alt="">
+  </div>
+  <div class="hero-inner">
+    <p class="hero-kicker" id="hero-kicker"></p>
+    <h1><span id="hero-text">快门按下的那一刻<br>便是永恒</span>
+      <span class="en" id="hero-en">PHOTOGRAPHY PORTFOLIO</span>
+    </h1>
+    <p class="hero-sub" id="hero-sub"></p>
+    <div class="hero-meta" id="hero-meta"></div>
+  </div>
+  <p class="scroll-hint" aria-hidden="true">SCROLL</p>
+</header>
+
+<!-- 引言 -->
+<section aria-label="摄影陈述">
+  <div class="wrap statement">
+    <p class="lead reveal" id="stmt-lead"></p>
+  </div>
+</section>
+
+<!-- 作品 -->
+<section id="works" aria-label="作品">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="no">01</span>
+      <h2>作品</h2>
+      <span class="en" id="works-en">SELECTED WORKS</span>
+    </div>
+
+    <div class="filters" role="group" aria-label="按分类筛选作品">
+      <div id="filter-bar"><!-- 分类按钮由 JS 生成 --></div>
+      <span class="count" id="photo-count" aria-live="polite"></span>
+    </div>
+
+    <div id="projectList"><!-- 项目行由 JS 生成 --></div>
+  </div>
+</section>
+
+<!-- 关于 -->
+<section class="about" id="about" aria-label="关于">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="no">02</span>
+      <h2>关于</h2>
+      <span class="en">ABOUT</span>
+    </div>
+    <div class="about-grid">
+      <div class="profile reveal">
+        <h3 id="about-name">拾光影集</h3>
+        <p class="en" id="about-en">PHOTOGRAPHY PORTFOLIO</p>
+        <p id="about-bio"></p>
+        <div class="facts" id="facts"></div>
+      </div>
+      <div class="lines reveal" id="cat-lines"></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span class="f-logo" id="footer-logo">拾光影集</span>
+  <span class="f-copy">© 李旭琪摄影作品集</span>
+</footer>
+
+<!-- 快速回到顶部 / 底部 -->
+<div class="float-nav" id="float-nav">
+  <button id="to-top" aria-label="回到顶部">↑</button>
+  <button id="to-bottom" aria-label="跳至底部">↓</button>
+</div>
+
+<!-- 大图浏览（无损原图 + 1:1 缩放 + 下载） -->
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="大图浏览">
+  <div class="lb-top">
+    <span class="lb-count" id="lb-index">01 / 09</span>
+    <span class="lb-title" id="lb-title"></span>
+    <button class="lb-close" id="lb-close" aria-label="关闭大图">✕</button>
+  </div>
+  <div class="lb-stage" id="lb-stage">
+    <img id="lb-img" src="" alt="">
+    <button class="lb-btn lb-prev" id="lb-prev" aria-label="上一张">←</button>
+    <button class="lb-btn lb-next" id="lb-next" aria-label="下一张">→</button>
+  </div>
+  <p class="lb-cap" id="lb-cap">
+    <a class="dl" id="lb-download" href="#" download>下载原图 ↓</a>
+  </p>
+</div>
+
+<!--
+  ══════════════════════════════════════════════════════════
+  升级说明：当前为纯静态版本，照片数据写在 assets/data.js。
+  未来接入后端时，把数据换成接口返回的同一份 JSON
+  （gallery.js 已预留 window.GALLERY_USE_API 开关），前端零改动。
+  ══════════════════════════════════════════════════════════
+-->
+<script src="assets/data.js"></script>
+<script src="assets/gallery.js"></script>
+</body>
+</html>
