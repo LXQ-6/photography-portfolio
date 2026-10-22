@@ -150,6 +150,12 @@ details.help ol{margin:.6rem 0 .6rem 1.2em;line-height:2}
     <textarea id="site-bio"></textarea>
     <label class="f">引言（页面居中大字；可把部分文字包进 &lt;i&gt;&lt;/i&gt; 显示为主题金色）</label>
     <textarea id="site-lead"></textarea>
+    <label class="f">关于区 · 英文行</label>
+    <input type="text" id="site-about-en">
+    <label class="f">关于区 · 简介文字</label>
+    <textarea id="site-about-bio"></textarea>
+    <label class="f">页脚版权行</label>
+    <input type="text" id="site-footer-copy">
     <p style="margin-top:1rem"><button id="btn-site" class="primary">保存文案并发布</button></p>
     <p class="status" id="site-status"></p>
   </div>
@@ -427,6 +433,11 @@ function renderSiteForm() {
   $("site-en").value = hero.en || "";
   $("site-bio").value = hero.bio || "";
   $("site-lead").value = (siteCopy.statement && siteCopy.statement.lead) || "";
+  // 远端字段缺失时，用本地 photos-data.js/data.js 的值兜底预填
+  const localSite = (window.GALLERY_DATA && window.GALLERY_DATA.site) || {};
+  $("site-about-en").value = (siteCopy.about && siteCopy.about.en) || (localSite.about && localSite.about.en) || "";
+  $("site-about-bio").value = (siteCopy.about && siteCopy.about.bio) || (localSite.about && localSite.about.bio) || "";
+  $("site-footer-copy").value = siteCopy.footerCopy || localSite.footerCopy || "";
   const sel = $("site-hero");
   const opts = photos.map(p => `<option value="${p.src}" ${p.src === hero.src ? "selected" : ""}>${p.title || p.src}（${p.category || ""}）</option>`).join("");
   sel.innerHTML = hero.src && !photos.some(p => p.src === hero.src)
@@ -446,6 +457,10 @@ $("btn-site").addEventListener("click", async () => {
     siteCopy.hero.src = $("site-hero").value;
     siteCopy.statement = siteCopy.statement || {};
     siteCopy.statement.lead = $("site-lead").value;
+    siteCopy.about = siteCopy.about || {};
+    siteCopy.about.en = $("site-about-en").value.trim();
+    siteCopy.about.bio = $("site-about-bio").value.trim();
+    siteCopy.footerCopy = $("site-footer-copy").value.trim();
     const content = "/* ============================================================\n   拾光影集 · 站点文案（本文件由 admin.html 管理页自动维护）\n   作品数据在 assets/photos-data.js；手动编辑请保持 JSON 格式\n   ============================================================ */\n\nwindow.GALLERY_DATA = " + JSON.stringify({ site: siteCopy }, null, 2) + ";\n";
     await putFile("assets/data.js", "更新站点文案", b64enc(content), dataSha);
     const check = await gh("assets/data.js", { qs: "ref=" + CFG.branch });

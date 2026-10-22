@@ -102,10 +102,11 @@ window.GALLERY_API_URL = "/api/photos";
     const st = site.statement || {};
     $("stmt-lead").innerHTML = st.lead || "";
 
-    /* 关于 */
+    /* 关于（独立文案，缺省回退到封面文案） */
     $("about-name").textContent = title;
-    $("about-en").textContent = hero.en || "PHOTOGRAPHY PORTFOLIO";
-    $("about-bio").textContent = hero.bio || site.description || "";
+    $("about-en").textContent = (site.about && site.about.en) || hero.en || "PHOTOGRAPHY PORTFOLIO";
+    $("about-bio").textContent = (site.about && site.about.bio) || hero.bio || site.description || "";
+    $("footer-copy").textContent = site.footerCopy || "";
     const places = [...new Set(photos.map(p => p.place).filter(Boolean))];
     $("facts").innerHTML =
       `<div class="f"><b>${photos.length}</b><span>收录作品</span></div>` +
