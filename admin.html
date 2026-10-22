@@ -138,6 +138,22 @@ details.help ol{margin:.6rem 0 .6rem 1.2em;line-height:2}
     <p style="margin-top:1rem"><button id="btn-add" class="primary">＋ 加入待保存列表</button></p>
   </div>
 
+  <!-- 站点文案 -->
+  <h2 class="sec"><span class="no">03</span>站点文案（封面与引言）</h2>
+  <div class="card">
+    <div class="grid">
+      <div class="wide"><label class="f">封面主标题（用换行分成两行）</label><textarea id="site-line"></textarea></div>
+      <div><label class="f">标题下英文行</label><input type="text" id="site-en"></div>
+      <div><label class="f">封面大图</label><select id="site-hero"></select></div>
+    </div>
+    <label class="f">封面简介（标题下的一行字）</label>
+    <textarea id="site-bio"></textarea>
+    <label class="f">引言（页面居中大字；可把部分文字包进 &lt;i&gt;&lt;/i&gt; 显示为主题金色）</label>
+    <textarea id="site-lead"></textarea>
+    <p style="margin-top:1rem"><button id="btn-site" class="primary">保存文案并发布</button></p>
+    <p class="status" id="site-status"></p>
+  </div>
+
   <!-- 保存 -->
   <div class="actions">
     <button id="btn-save" class="primary">保存全部更改并发布</button>
@@ -158,10 +174,13 @@ const $ = (id) => document.getElementById(id);
 let token = localStorage.getItem("gh_pat") || "";
 let photos = [];        // 工作副本：{src,title,en,category,place,ar,desc,exif}
 let shas = {};          // 文件路径 -> sha（更新/删除需要）
-let newImages = {};     // 临时索引 -> {filename, contentB64}
+let newImages = {};     // 临时索引 -> {filename, contentB64, ar}
 let pendingNew = [];    // 待新增条目
 let removed = [];       // 待删除条目（含图片路径）
 let dirty = false;
+let dataSha = null;     // data.js 的 sha（保存文案用）
+let siteCopy = null;    // data.js 的 site 工作副本
+const uploaded = new Set();  // 本次会话已成功上传的文件，重试时跳过
 
 const b64dec = (b64) => decodeURIComponent(escape(atob(b64.replace(/\n/g,""))));
 const b64enc = (str) => btoa(unescape(encodeURIComponent(str)));
@@ -185,8 +204,24 @@ async function gh(path, opts = {}) {
 }
 const getDataFile = () => gh(CFG.dataPath, { qs: "ref=" + CFG.branch });
 const getPhotoSha = (src) => gh(src, { qs: "ref=" + CFG.branch }).then(f => f.sha).catch(() => null);
-const putFile = (path, message, content, sha) => gh(path, { method: "PUT", body: { message, content, branch: CFG.branch, ...(sha ? { sha } : {}) } });
-const delFile = (path, message, sha) => gh(path, { method: "DELETE", body: { message, branch: CFG.branch, sha } });
+const putFile = (path, message, content, sha) => withRetry(() => gh(path, { method: "PUT", body: { message, content, branch: CFG.branch, ...(sha ? { sha } : {}) } }));
+const delFile = (path, message, sha) => withRetry(() => gh(path, { method: "DELETE", body: { message, branch: CFG.branch, sha } }));
+
+/* 网络抖动自动重试（指数退避） */
+async function withRetry(fn, tries = 3) {
+  let lastErr;
+  for (let t = 0; t < tries; t++) {
+    try { return await fn(); }
+    catch (e) { lastErr = e; if (t < tries - 1) await new Promise(r => setTimeout(r, 800 * (t + 1))); }
+  }
+  throw lastErr;
+}
+/* 解析 JS 数据文件为对象（跳过头部注释，按 window.XXX = 定位赋值） */
+function parseJsData(text) {
+  const m = text.match(/window\.\w+\s*=\s*([\s\S]*?);\s*$/);
+  if (!m) throw new Error("数据文件格式不正确");
+  return JSON.parse(m[1]);
+}
 
 /* ---------- 状态提示 ---------- */
 function setStatus(el, text, cls) { el.className = "status " + (cls || ""); el.innerHTML = text; }
@@ -210,13 +245,18 @@ async function loadDataFile() {
   try {
     const f = await getDataFile();
     shas[CFG.dataPath] = f.sha;
-    const text = b64dec(f.content);
-    const json = text.slice(text.indexOf("=") + 1).trim().replace(/;\s*$/, "");
-    photos = JSON.parse(json);
+    photos = parseJsData(b64dec(f.content));
     localStorage.setItem("gh_pat", token);
     setStatus($("token-status"), `✓ 连接成功，已读取 ${photos.length} 件作品`, "ok");
     renderCards();
     renderCatList();
+    // 同时载入站点文案
+    try {
+      const df = await gh("assets/data.js", { qs: "ref=" + CFG.branch });
+      dataSha = df.sha;
+      siteCopy = parseJsData(b64dec(df.content)).site;
+      renderSiteForm();
+    } catch (e) { /* 文案区载入失败不影响作品管理 */ }
   } catch (e) {
     setStatus($("token-status"), "连接失败：" + e.message + "（请检查令牌是否有效、是否勾选了 photography-portfolio 仓库与 Contents 读写权限）", "err");
   }
@@ -286,7 +326,7 @@ function renderCards() {
       if (!file) return;
       try {
         const { filename, contentB64, width, height } = await readImage(file);
-        newImages[i] = { filename, contentB64 };
+        newImages[i] = { filename, contentB64, ar: width > height ? "16/10" : "4/5" };
         photos[i].ar = width > height ? "16/10" : "4/5";
         $("thumb-" + i).src = URL.createObjectURL(file);
         $("note-" + i).textContent = `已选新图 ${filename}（保存时上传）`;
@@ -379,6 +419,47 @@ $("btn-add").addEventListener("click", () => {
   addInfo = null;
 });
 
+/* ---------- 站点文案 ---------- */
+function renderSiteForm() {
+  if (!siteCopy) return;
+  const hero = siteCopy.hero || {};
+  $("site-line").value = (hero.line || "").replace(/\n/g, "\n");
+  $("site-en").value = hero.en || "";
+  $("site-bio").value = hero.bio || "";
+  $("site-lead").value = (siteCopy.statement && siteCopy.statement.lead) || "";
+  const sel = $("site-hero");
+  const opts = photos.map(p => `<option value="${p.src}" ${p.src === hero.src ? "selected" : ""}>${p.title || p.src}（${p.category || ""}）</option>`).join("");
+  sel.innerHTML = hero.src && !photos.some(p => p.src === hero.src)
+    ? `<option value="${hero.src}" selected>${hero.src}（当前）</option>` + opts
+    : opts;
+}
+$("btn-site").addEventListener("click", async () => {
+  if (!token || !siteCopy) return setStatus($("site-status"), "请先连接 GitHub", "err");
+  const btn = $("btn-site");
+  btn.disabled = true;
+  try {
+    setStatus($("site-status"), '<span class="spin"></span>正在发布文案…');
+    siteCopy.hero = siteCopy.hero || {};
+    siteCopy.hero.line = $("site-line").value.replace(/\r/g, "");
+    siteCopy.hero.en = $("site-en").value.trim();
+    siteCopy.hero.bio = $("site-bio").value.trim();
+    siteCopy.hero.src = $("site-hero").value;
+    siteCopy.statement = siteCopy.statement || {};
+    siteCopy.statement.lead = $("site-lead").value;
+    const content = "/* ============================================================\n   拾光影集 · 站点文案（本文件由 admin.html 管理页自动维护）\n   作品数据在 assets/photos-data.js；手动编辑请保持 JSON 格式\n   ============================================================ */\n\nwindow.GALLERY_DATA = " + JSON.stringify({ site: siteCopy }, null, 2) + ";\n";
+    await putFile("assets/data.js", "更新站点文案", b64enc(content), dataSha);
+    const check = await gh("assets/data.js", { qs: "ref=" + CFG.branch });
+    const parsed = parseJsData(b64dec(check.content)).site;
+    if (!parsed.hero || parsed.hero.line !== siteCopy.hero.line) throw new Error("一致性校验未通过，请重试");
+    dataSha = check.sha;
+    setStatus($("site-status"), "✓ 文案已发布！GitHub Pages 约 1 分钟后自动更新", "ok");
+  } catch (e) {
+    setStatus($("site-status"), "保存失败：" + e.message, "err");
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 /* ---------- 保存全部 ---------- */
 $("btn-save").addEventListener("click", async () => {
   if (!token) return setStatus($("save-status"), "请先连接 GitHub", "err");
@@ -386,19 +467,31 @@ $("btn-save").addEventListener("click", async () => {
   const btn = $("btn-save");
   btn.disabled = true;
   try {
-    let step = 0, total = pendingNew.length + removed.length + 1;
-    // 1. 上传新图（含替换的新图）
+    // 工作副本：应用所有已做的修改
+    const work = photos.map(p => ({ ...p, exif: { ...(p.exif || {}) } }));
+    for (const i of Object.keys(newImages)) {
+      work[+i].src = newImages[i].filename;
+      work[+i].ar = newImages[i].ar || work[+i].ar;
+    }
+    let step = 0, total = pendingNew.length + Object.keys(newImages).length + removed.length + 1;
+
+    // 1. 上传新图（已成功上传过的自动跳过，重试不产生重复文件）
     for (const item of pendingNew) {
-      step++;
-      setStatus($("save-status"), `<span class="spin"></span>上传照片 ${step}/${total}：${item.meta.title}`);
-      await putFile(item.info.filename, `新增作品：${item.meta.title}`, item.info.contentB64);
-      photos.push({ src: item.info.filename, ...item.meta });
+      if (!uploaded.has(item.info.filename)) {
+        step++;
+        setStatus($("save-status"), `<span class="spin"></span>上传照片 ${step}/${total}：${item.meta.title}`);
+        await putFile(item.info.filename, `新增作品：${item.meta.title}`, item.info.contentB64);
+        uploaded.add(item.info.filename);
+      }
     }
     for (const i of Object.keys(newImages)) {
-      step++;
-      setStatus($("save-status"), `<span class="spin"></span>上传替换图 ${step}/${total}`);
-      await putFile(newImages[i].filename, `替换作品图：${photos[i].title || ""}`, newImages[i].contentB64);
-      photos[i].src = newImages[i].filename;
+      const f = newImages[i].filename;
+      if (!uploaded.has(f)) {
+        step++;
+        setStatus($("save-status"), `<span class="spin"></span>上传替换图 ${step}/${total}`);
+        await putFile(f, `替换作品图：${photos[+i].title || ""}`, newImages[i].contentB64);
+        uploaded.add(f);
+      }
     }
     // 2. 删除旧图
     for (const p of removed) {
@@ -409,13 +502,22 @@ $("btn-save").addEventListener("click", async () => {
     }
     // 3. 写回数据文件
     setStatus($("save-status"), `<span class="spin"></span>发布数据文件 ${total}/${total}`);
-    const dataContent = "window.GALLERY_PHOTOS = " + JSON.stringify(photos, null, 2) + ";\n";
-    await putFile(CFG.dataPath, `更新作品数据（共 ${photos.length} 件）`, b64enc(dataContent), shas[CFG.dataPath]);
-    setStatus($("save-status"), `✓ 已发布！GitHub Pages 约 1 分钟后自动更新线上站点`, "ok");
+    const dataContent = "window.GALLERY_PHOTOS = " + JSON.stringify(work, null, 2) + ";\n";
+    await putFile(CFG.dataPath, `更新作品数据（共 ${work.length} 件）`, b64enc(dataContent), shas[CFG.dataPath]);
+
+    // 4. 一致性校验：回读远端文件，确认内容与本地工作副本一致
+    const check = await gh(CFG.dataPath, { qs: "ref=" + CFG.branch });
+    const parsed = parseJsData(b64dec(check.content));
+    if (parsed.length !== work.length || parsed.some((p, i) => p.src !== work[i].src || p.title !== work[i].title)) {
+      throw new Error("数据一致性校验未通过，请点击保存重试（已上传的照片不会重复上传）");
+    }
+    shas[CFG.dataPath] = check.sha;
+    setStatus($("save-status"), `✓ 已发布并通过校验！GitHub Pages 约 1 分钟后自动更新线上站点`, "ok");
+    photos = work;
     pendingNew = []; removed = []; newImages = {}; dirty = false;
-    loadDataFile();
+    renderCards(); renderCatList();
   } catch (e) {
-    setStatus($("save-status"), "保存失败：" + e.message, "err");
+    setStatus($("save-status"), "保存失败：" + e.message + "（可再次点击保存，已上传的照片不会重复上传）", "err");
   } finally {
     btn.disabled = false;
   }

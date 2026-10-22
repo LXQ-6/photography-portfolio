@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+
+Sitemap: https://lxq-6.github.io/photography-portfolio/sitemap.xml

@@ -121,7 +121,12 @@ section{padding:clamp(4rem,10vh,7.5rem) clamp(1.2rem,4vw,3.2rem)}
 }
 .project:nth-child(even) .proj-media{order:2}
 .proj-media{position:relative;overflow:hidden;cursor:zoom-in;background:var(--bg-raise)}
-.proj-media img{width:100%;aspect-ratio:16/10;object-fit:cover;transition:transform 1.2s var(--ease),filter .8s var(--ease);filter:brightness(.94)}
+/* 加载骨架屏：微光扫过 */
+.proj-media{background:linear-gradient(110deg,var(--bg-raise) 30%,var(--bg-soft) 50%,var(--bg-raise) 70%);background-size:200% 100%;animation:shimmer 1.6s linear infinite}
+@keyframes shimmer{to{background-position:-200% 0}}
+.proj-media:has(img.loaded){animation:none;background:var(--bg-raise)}
+.proj-media img{width:100%;aspect-ratio:16/10;object-fit:cover;opacity:0;filter:brightness(.94);transition:transform 1.2s var(--ease),filter .8s var(--ease),opacity .6s ease}
+.proj-media img.loaded{opacity:1}
 .proj-media:hover img{transform:scale(1.035);filter:brightness(1.02)}
 .proj-media .view{
   position:absolute;left:1rem;bottom:1rem;

@@ -131,9 +131,15 @@ window.GALLERY_API_URL = "/api/photos";
       b.textContent = cat;
       b.dataset.cat = cat;
       b.setAttribute("aria-pressed", String(cat === activeCategory));
-      b.addEventListener("click", () => { activeCategory = cat; renderFilters(); renderProjects(); });
+      b.addEventListener("click", () => { activeCategory = cat; renderFilters(); renderProjects(); syncCatUrl(); });
       bar.appendChild(b);
     });
+  }
+
+  /* 分类状态同步到 URL（可分享 ?cat=风光 这样的链接） */
+  function syncCatUrl() {
+    const qs = activeCategory === "全部" ? "" : "?cat=" + encodeURIComponent(activeCategory);
+    history.replaceState(null, "", location.pathname + qs + location.hash);
   }
 
   /* ---------- 项目行 ---------- */
@@ -190,7 +196,12 @@ window.GALLERY_API_URL = "/api/photos";
 
     const img = art.querySelector("img");
     if (p.ar) img.style.aspectRatio = p.ar;   // 竖幅照片用 4/5，横幅默认 16/10
-    img.addEventListener("error", () => { img.style.minHeight = "220px"; });
+    // 渐显：加载完成后淡入，加载前显示骨架屏
+    img.classList.add("loading");
+    const show = () => img.classList.add("loaded");
+    img.addEventListener("load", show);
+    if (img.complete && img.naturalWidth > 0) show();
+    img.addEventListener("error", () => { img.classList.add("loaded"); img.style.minHeight = "220px"; });
 
     const media = art.querySelector(".proj-media");
     media.addEventListener("click", () => openLightbox(p));
@@ -240,6 +251,12 @@ window.GALLERY_API_URL = "/api/photos";
     dl.href = p.src;
     dl.setAttribute("download", p.src.split("/").pop() || "photo.jpg");
     cap.appendChild(dl);
+
+    // 预加载前后各一张原图，切换时零等待
+    [lbIdx - 1, lbIdx + 1].forEach(j => {
+      const np = lbList[(j + lbList.length) % lbList.length];
+      if (np && np.src !== p.src) { const pre = new Image(); pre.src = np.src; }
+    });
   }
 
   function closeLightbox() {
@@ -293,6 +310,9 @@ window.GALLERY_API_URL = "/api/photos";
     site = data.site || {};
     // 作品数据优先读 photos-data.js（admin.html 管理页维护），兼容旧版 data.js 内嵌数据
     photos = window.GALLERY_PHOTOS || data.photos || [];
+    // 支持 ?cat=分类 直达（可分享某个分类的链接）
+    const urlCat = new URLSearchParams(location.search).get("cat");
+    if (urlCat && (urlCat === "全部" || photos.some(p => p.category === urlCat))) activeCategory = urlCat;
     renderSite();
     renderFilters();
     renderProjects();
