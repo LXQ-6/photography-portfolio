@@ -21,9 +21,6 @@ window.GALLERY_DATA = {
       "en": "PHOTOGRAPHY PORTFOLIO",
       "bio": "时间停止本是神迹，而摄影却让凡人得以掌握这般神技。"
     },
-    "footerCopy": "© 李旭琪摄影作品集",
-    "analytics": {
-      "goatcounter": ""
-    }
+    "footerCopy": "© 李旭琪摄影作品集"
   }
 };

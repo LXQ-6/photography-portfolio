@@ -49,7 +49,6 @@ button.primary{background:var(--ink);color:#1a150f;border-color:var(--ink);font-
 button.primary:hover{background:var(--accent);border-color:var(--accent);color:#1a150f}
 button.danger{color:var(--danger);border-color:rgba(201,107,99,.4)}
 button.danger:hover{border-color:var(--danger)}
-.dash-link{font-size:.84rem;letter-spacing:.1em;border-bottom:1px solid var(--accent-deep);padding-bottom:.15rem}
 button:disabled{opacity:.45;cursor:not-allowed}
 
 /* 令牌区 */
@@ -159,23 +158,6 @@ details.help ol{margin:.6rem 0 .6rem 1.2em;line-height:2}
     <input type="text" id="site-footer-copy">
     <p style="margin-top:1rem"><button id="btn-site" class="primary">保存文案并发布</button></p>
     <p class="status" id="site-status"></p>
-  </div>
-
-  <!-- 访问统计 -->
-  <h2 class="sec"><span class="no">04</span>访问统计</h2>
-  <div class="card">
-    <label class="f">GoatCounter 站点代码（可选，留空则不启用统计）</label>
-    <input type="text" id="site-analytics" placeholder="例如：my-gallery">
-    <p class="tip" style="margin-top:.6rem">
-      在 <a href="https://www.goatcounter.com" target="_blank" rel="noopener">goatcounter.com</a> 免费注册（选 non-commercial）后获得站点代码。
-      访问人数、访客来源、热门作品都在 GoatCounter 后台查看，点下方链接直达（需登录你的 GoatCounter 账号）。
-      无 Cookie、不收集个人数据，留空则完全不加载统计脚本。
-    </p>
-    <p style="margin-top:1rem;display:flex;gap:.8rem;align-items:center;flex-wrap:wrap">
-      <button id="btn-analytics" class="primary">保存统计设置</button>
-      <a id="gc-link" class="dash-link" href="#" target="_blank" rel="noopener" hidden>查看访问数据 ↗</a>
-    </p>
-    <p class="status" id="analytics-status"></p>
   </div>
 
   <!-- 保存 -->
@@ -476,8 +458,6 @@ function renderSiteForm() {
   $("site-about-en").value = (siteCopy.about && siteCopy.about.en) || (localSite.about && localSite.about.en) || "";
   $("site-about-bio").value = (siteCopy.about && siteCopy.about.bio) || (localSite.about && localSite.about.bio) || "";
   $("site-footer-copy").value = siteCopy.footerCopy || localSite.footerCopy || "";
-  $("site-analytics").value = (siteCopy.analytics && siteCopy.analytics.goatcounter) || (localSite.analytics && localSite.analytics.goatcounter) || "";
-  updateGcLink();
   const sel = $("site-hero");
   const opts = photos.map(p => `<option value="${p.src}" ${p.src === hero.src ? "selected" : ""}>${p.title || p.src}（${p.category || ""}）</option>`).join("");
   sel.innerHTML = hero.src && !photos.some(p => p.src === hero.src)
@@ -510,39 +490,6 @@ $("btn-site").addEventListener("click", async () => {
     setStatus($("site-status"), "✓ 文案已发布！GitHub Pages 约 1 分钟后自动更新", "ok");
   } catch (e) {
     setStatus($("site-status"), "保存失败：" + e.message, "err");
-  } finally {
-    btn.disabled = false;
-  }
-});
-
-/* ---------- 访问统计（独立保存） ---------- */
-function updateGcLink() {
-  const code = $("site-analytics").value.trim() || (siteCopy && siteCopy.analytics && siteCopy.analytics.goatcounter) || "";
-  const link = $("gc-link");
-  if (code) { link.href = "https://" + code + ".goatcounter.com"; link.hidden = false; }
-  else link.hidden = true;
-}
-$("site-analytics").addEventListener("input", updateGcLink);
-$("btn-analytics").addEventListener("click", async () => {
-  if (!token || !siteCopy) return setStatus($("analytics-status"), "请先连接 GitHub", "err");
-  const btn = $("btn-analytics");
-  btn.disabled = true;
-  try {
-    setStatus($("analytics-status"), '<span class="spin"></span>正在发布统计设置…');
-    const gc = $("site-analytics").value.trim();
-    siteCopy.analytics = gc ? { goatcounter: gc } : {};
-    const content = "/* ============================================================\n   拾光影集 · 站点文案（本文件由 admin.html 管理页自动维护）\n   作品数据在 assets/photos-data.js；手动编辑请保持 JSON 格式\n   ============================================================ */\n\nwindow.GALLERY_DATA = " + JSON.stringify({ site: siteCopy }, null, 2) + ";\n";
-    await putFile("assets/data.js", "更新访问统计设置", b64enc(content), dataSha);
-    const check = await gh("assets/data.js", { qs: "ref=" + CFG.branch });
-    const parsed = parseJsData(b64dec(check.content)).site;
-    dataSha = check.sha;
-    if (JSON.stringify(parsed.analytics || {}) !== JSON.stringify(siteCopy.analytics)) throw new Error("一致性校验未通过，请重试");
-    updateGcLink();
-    setStatus($("analytics-status"), gc
-      ? "✓ 统计已启用！访问数据请点\"查看访问数据\"登录 GoatCounter 后台查看"
-      : "✓ 统计已关闭", "ok");
-  } catch (e) {
-    setStatus($("analytics-status"), "保存失败：" + e.message, "err");
   } finally {
     btn.disabled = false;
   }

@@ -137,19 +137,6 @@
 <script src="assets/data.js"></script>
 <script src="assets/photos-data.js"></script>
 <script src="assets/gallery.js"></script>
-<!-- 访问统计（GoatCounter，在管理页"站点文案"里填入站点代码后生效；不填不加载） -->
-<script>
-(function () {
-  var a = (window.GALLERY_DATA && window.GALLERY_DATA.site && window.GALLERY_DATA.site.analytics) || {};
-  if (a.goatcounter) {
-    var s = document.createElement("script");
-    s.async = true;
-    s.src = "https://gc.zgo.at/count.js";
-    s.setAttribute("data-goatcounter", "https://" + a.goatcounter + ".goatcounter.com/count");
-    document.body.appendChild(s);
-  }
-})();
-</script>
 <!-- PWA：注册 Service Worker（离线兜底 + 可安装到主屏幕） -->
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
