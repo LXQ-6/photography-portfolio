@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>拾光影集｜李旭琪摄影作品集</title>
 <meta name="description" content="李旭琪的个人摄影作品集——风光、城市、人像与人文的拍摄与记录。">
+<meta name="theme-color" content="#161310">
+<link rel="manifest" href="assets/manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
 <!-- 分享卡片（微信/微博/推特等预览） -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="拾光影集">
@@ -134,5 +137,24 @@
 <script src="assets/data.js"></script>
 <script src="assets/photos-data.js"></script>
 <script src="assets/gallery.js"></script>
+<!-- 访问统计（GoatCounter，在管理页"站点文案"里填入站点代码后生效；不填不加载） -->
+<script>
+(function () {
+  var a = (window.GALLERY_DATA && window.GALLERY_DATA.site && window.GALLERY_DATA.site.analytics) || {};
+  if (a.goatcounter) {
+    var s = document.createElement("script");
+    s.async = true;
+    s.src = "https://gc.zgo.at/count.js";
+    s.setAttribute("data-goatcounter", "https://" + a.goatcounter + ".goatcounter.com/count");
+    document.body.appendChild(s);
+  }
+})();
+</script>
+<!-- PWA：注册 Service Worker（离线兜底 + 可安装到主屏幕） -->
+<script>
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  navigator.serviceWorker.register("sw.js").catch(function () {});
+}
+</script>
 </body>
 </html>

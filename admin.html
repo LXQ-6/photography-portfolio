@@ -120,8 +120,8 @@ details.help ol{margin:.6rem 0 .6rem 1.2em;line-height:2}
   <!-- 新增 -->
   <h2 class="sec"><span class="no">02</span>新增作品</h2>
   <div class="card" id="add-card">
-    <label class="f">照片文件（jpg / png / webp，原图直接上传，不做压缩）</label>
-    <input type="file" id="add-file" accept="image/jpeg,image/png,image/webp">
+    <label class="f">照片文件（jpg / png / webp / heic，原图直接上传，不做压缩）</label>
+    <input type="file" id="add-file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif">
     <div id="add-preview"></div>
     <div class="grid">
       <div><label class="f">作品标题 *</label><input type="text" id="add-title"></div>
@@ -156,6 +156,8 @@ details.help ol{margin:.6rem 0 .6rem 1.2em;line-height:2}
     <textarea id="site-about-bio"></textarea>
     <label class="f">页脚版权行</label>
     <input type="text" id="site-footer-copy">
+    <label class="f">访问统计 · GoatCounter 站点代码（可选，留空则不启用统计）</label>
+    <input type="text" id="site-analytics" placeholder="例如：my-gallery">
     <p style="margin-top:1rem"><button id="btn-site" class="primary">保存文案并发布</button></p>
     <p class="status" id="site-status"></p>
   </div>
@@ -282,7 +284,7 @@ function renderCards() {
         <div class="t"><b contenteditable="true" data-k="title" data-i="${i}">${p.title || ""}</b>
           <small>${p.src.split("/").pop()} · ${p.category || "未分类"}</small></div>
         <div class="ops">
-          <label style="cursor:pointer"><input type="file" accept="image/jpeg,image/png,image/webp" hidden data-replace="${i}">替换图片</label>
+          <label style="cursor:pointer"><input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" hidden data-replace="${i}">替换图片</label>
           <button class="danger" data-del="${i}">删除作品</button>
         </div>
       </div>
@@ -362,17 +364,37 @@ function renderCatList() {
   $("cat-list").innerHTML = all.map(c => `<option value="${c}">`).join("");
 }
 
-/* ---------- 读取图片文件 ---------- */
+/* ---------- 读取图片文件（支持 HEIC/HEIF 自动转 JPG） ---------- */
+let heicLibPromise = null;
+function loadHeicLib() {
+  if (!heicLibPromise) {
+    heicLibPromise = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "assets/vendor/heic2any.min.js";
+      s.onload = resolve;
+      s.onerror = () => { heicLibPromise = null; reject(new Error("HEIC 转换库加载失败")); };
+      document.head.appendChild(s);
+    });
+  }
+  return heicLibPromise;
+}
+async function toUploadable(file) {
+  const isHeic = /\.(heic|heif)$/i.test(file.name) || /hei[cf]/i.test(file.type || "");
+  if (!isHeic) return { blob: file, ext: (file.name.split(".").pop() || "jpg").toLowerCase() };
+  await loadHeicLib();
+  setStatus($("save-status"), "HEIC 转换中，请稍候…");
+  const out = await window.heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
+  return { blob: Array.isArray(out) ? out[0] : out, ext: "jpg" };
+}
 function readImage(file) {
-  return new Promise((resolve, reject) => {
-    if (file.size > 40 * 1024 * 1024) return reject(new Error("文件超过 40MB，GitHub 接口不支持，请先压缩"));
+  return toUploadable(file).then(({ blob, ext }) => new Promise((resolve, reject) => {
+    if (blob.size > 40 * 1024 * 1024) return reject(new Error("文件超过 40MB，GitHub 接口不支持，请先压缩"));
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result;
       const contentB64 = dataUrl.split(",")[1];
       const img = new Image();
       img.onload = () => {
-        const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
         const filename = CFG.photoDir + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
         resolve({ filename, contentB64, width: img.naturalWidth, height: img.naturalHeight });
       };
@@ -380,8 +402,8 @@ function readImage(file) {
       img.src = dataUrl;
     };
     reader.onerror = () => reject(new Error("文件读取失败"));
-    reader.readAsDataURL(file);
-  });
+    reader.readAsDataURL(blob);
+  }));
 }
 
 /* ---------- 新增作品 ---------- */
@@ -438,6 +460,7 @@ function renderSiteForm() {
   $("site-about-en").value = (siteCopy.about && siteCopy.about.en) || (localSite.about && localSite.about.en) || "";
   $("site-about-bio").value = (siteCopy.about && siteCopy.about.bio) || (localSite.about && localSite.about.bio) || "";
   $("site-footer-copy").value = siteCopy.footerCopy || localSite.footerCopy || "";
+  $("site-analytics").value = (siteCopy.analytics && siteCopy.analytics.goatcounter) || (localSite.analytics && localSite.analytics.goatcounter) || "";
   const sel = $("site-hero");
   const opts = photos.map(p => `<option value="${p.src}" ${p.src === hero.src ? "selected" : ""}>${p.title || p.src}（${p.category || ""}）</option>`).join("");
   sel.innerHTML = hero.src && !photos.some(p => p.src === hero.src)
@@ -461,6 +484,8 @@ $("btn-site").addEventListener("click", async () => {
     siteCopy.about.en = $("site-about-en").value.trim();
     siteCopy.about.bio = $("site-about-bio").value.trim();
     siteCopy.footerCopy = $("site-footer-copy").value.trim();
+    const gc = $("site-analytics").value.trim();
+    siteCopy.analytics = gc ? { goatcounter: gc } : {};
     const content = "/* ============================================================\n   拾光影集 · 站点文案（本文件由 admin.html 管理页自动维护）\n   作品数据在 assets/photos-data.js；手动编辑请保持 JSON 格式\n   ============================================================ */\n\nwindow.GALLERY_DATA = " + JSON.stringify({ site: siteCopy }, null, 2) + ";\n";
     await putFile("assets/data.js", "更新站点文案", b64enc(content), dataSha);
     const check = await gh("assets/data.js", { qs: "ref=" + CFG.branch });

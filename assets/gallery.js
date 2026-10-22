@@ -289,10 +289,39 @@ window.GALLERY_API_URL = "/api/photos";
       else if (e.key === "ArrowLeft") stepLightbox(-1);
       else if (e.key === "ArrowRight") stepLightbox(1);
     });
-    // 触屏滑动切换
-    let tx = 0;
-    $("lb-stage").addEventListener("touchstart", (e) => { tx = e.touches[0].clientX; }, { passive: true });
-    $("lb-stage").addEventListener("touchend", (e) => {
+    // 触屏：单指滑动切换；双指捏合进入/退出 1:1 原图缩放
+    let tx = 0, pinchStart = 0, zoomedAtStart = false;
+    const stage = $("lb-stage");
+    stage.addEventListener("touchstart", (e) => {
+      if (e.touches.length === 2) {
+        pinchStart = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        zoomedAtStart = stage.classList.contains("zoomed");
+      } else if (e.touches.length === 1) {
+        tx = e.touches[0].clientX;
+        if (pinchStart === 0) stage.dataset.swiping = "1";
+      }
+    }, { passive: true });
+    stage.addEventListener("touchmove", (e) => {
+      if (e.touches.length === 2 && pinchStart > 0) {
+        e.preventDefault();   // 捏合时阻止浏览器整页缩放
+        const d = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        const ratio = d / pinchStart;
+        if (!zoomedAtStart && ratio > 1.25) stage.classList.add("zoomed");
+        if (zoomedAtStart && ratio < 0.8) stage.classList.remove("zoomed");
+      }
+    }, { passive: false });
+    stage.addEventListener("touchend", (e) => {
+      if (e.touches.length > 0) return;          // 捏合过程中不触发切换
+      const wasSwiping = stage.dataset.swiping === "1";
+      stage.dataset.swiping = "";
+      pinchStart = 0;
+      if (!wasSwiping) return;
       const dx = e.changedTouches[0].clientX - tx;
       if (Math.abs(dx) > 50) stepLightbox(dx < 0 ? 1 : -1);
     }, { passive: true });

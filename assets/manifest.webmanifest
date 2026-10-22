@@ -1,0 +1,17 @@
+{
+  "name": "拾光影集｜李旭琪摄影作品集",
+  "short_name": "拾光影集",
+  "description": "李旭琪的个人摄影作品集——风光、城市、人像与人文的拍摄与记录。",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#161310",
+  "theme_color": "#161310",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
