@@ -120,7 +120,7 @@ details.help ol{margin:.6rem 0 .6rem 1.2em;line-height:2}
   <!-- 新增 -->
   <h2 class="sec"><span class="no">02</span>新增作品</h2>
   <div class="card" id="add-card">
-    <label class="f">照片文件（jpg / png / webp / heic，原图直接上传，不做压缩）</label>
+    <label class="f">照片文件（jpg / png / webp / heic，原图 ≤100MB 不做压缩；超过 2000px 自动生成预览图用于浏览，下载原图仍是原图）</label>
     <input type="file" id="add-file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif">
     <div id="add-preview"></div>
     <div class="grid">
@@ -278,7 +278,7 @@ function renderCards() {
     card.className = "card";
     card.innerHTML = `
       <div class="card-head">
-        <img src="${p.src}" alt="" loading="lazy" id="thumb-${i}">
+        <img src="${p.preview || p.src}" alt="" loading="lazy" id="thumb-${i}">
         <div class="t"><b contenteditable="true" data-k="title" data-i="${i}">${p.title || ""}</b>
           <small>${p.src.split("/").pop()} · ${p.category || "未分类"}</small></div>
         <div class="ops">
@@ -331,11 +331,11 @@ function renderCards() {
       const file = inp.files[0];
       if (!file) return;
       try {
-        const { filename, contentB64, width, height } = await readImage(file);
-        newImages[i] = { filename, contentB64, ar: width > height ? "16/10" : "4/5" };
+        const { filename, contentB64, previewFilename, previewB64, dataUrl, width, height } = await readImage(file);
+        newImages[i] = { filename, contentB64, previewFilename, previewB64, ar: width > height ? "16/10" : "4/5" };
         photos[i].ar = width > height ? "16/10" : "4/5";
-        $("thumb-" + i).src = URL.createObjectURL(file);
-        $("note-" + i).textContent = `已选新图 ${filename}（保存时上传）`;
+        $("thumb-" + i).src = dataUrl;
+        $("note-" + i).textContent = `已选新图 ${filename}${previewFilename ? "（含预览图，保存时一起上传）" : ""}`;
         dirty = true;
       } catch (e) { alert("读取图片失败：" + e.message); }
     });
@@ -386,15 +386,29 @@ async function toUploadable(file) {
 }
 function readImage(file) {
   return toUploadable(file).then(({ blob, ext }) => new Promise((resolve, reject) => {
-    if (blob.size > 40 * 1024 * 1024) return reject(new Error("文件超过 40MB，GitHub 接口不支持，请先压缩"));
+    if (blob.size > 100 * 1024 * 1024) return reject(new Error("文件超过 100MB（GitHub 接口上限），请先压缩"));
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result;
       const contentB64 = dataUrl.split(",")[1];
       const img = new Image();
       img.onload = () => {
-        const filename = CFG.photoDir + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
-        resolve({ filename, contentB64, width: img.naturalWidth, height: img.naturalHeight });
+        try {
+          const filename = CFG.photoDir + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
+          // 生成 2000px 预览图（长边 >2000px 才生成）：浏览用它，下载原图才是原图
+          let previewFilename = null, previewB64 = null;
+          const longEdge = Math.max(img.naturalWidth, img.naturalHeight);
+          if (longEdge > 2000) {
+            const scale = 2000 / longEdge;
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.round(img.naturalWidth * scale);
+            canvas.height = Math.round(img.naturalHeight * scale);
+            canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+            previewB64 = canvas.toDataURL("image/jpeg", 0.9).split(",")[1];
+            previewFilename = CFG.photoDir + "p" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + ".jpg";
+          }
+          resolve({ filename, contentB64, previewFilename, previewB64, dataUrl, width: img.naturalWidth, height: img.naturalHeight });
+        } catch (e) { reject(new Error("预览图生成失败：" + e.message)); }
       };
       img.onerror = () => reject(new Error("无法解析图片"));
       img.src = dataUrl;
@@ -409,11 +423,12 @@ let addInfo = null;   // 当前选中的新图片信息
 $("add-file").addEventListener("change", async () => {
   const file = $("add-file").files[0];
   if (!file) { addInfo = null; $("add-preview").innerHTML = ""; return; }
+  $("add-preview").innerHTML = '<span class="spin"></span>解析图片中…';
   try {
     addInfo = await readImage(file);
-    $("add-preview").innerHTML = `<img class="pending-img" src="${URL.createObjectURL(file)}">` +
-      `<p class="file-note">已选 ${file.name}（${addInfo.width}×${addInfo.height}，${addInfo.width > addInfo.height ? "横幅" : "竖幅"}），填写上方信息后点"加入待保存列表"</p>`;
-  } catch (e) { addInfo = null; alert(e.message); }
+    $("add-preview").innerHTML = `<img class="pending-img" src="${addInfo.dataUrl}">` +
+      `<p class="file-note">已选 ${file.name}（${addInfo.width}×${addInfo.height}，${addInfo.width > addInfo.height ? "横幅" : "竖幅"}${addInfo.previewFilename ? "，已生成预览图" : ""}），填写上方信息后点"加入待保存列表"</p>`;
+  } catch (e) { addInfo = null; $("add-preview").innerHTML = ""; alert(e.message); }
 });
 $("btn-add").addEventListener("click", () => {
   if (!addInfo) return alert("请先选择照片文件");
@@ -502,45 +517,60 @@ $("btn-save").addEventListener("click", async () => {
   const btn = $("btn-save");
   btn.disabled = true;
   try {
-    // 工作副本：应用所有已做的修改
+    // 工作副本：应用所有已做的修改（含预览图字段）
     const work = photos.map(p => ({ ...p, exif: { ...(p.exif || {}) } }));
     for (const i of Object.keys(newImages)) {
       work[+i].src = newImages[i].filename;
+      work[+i].preview = newImages[i].previewFilename || "";
       work[+i].ar = newImages[i].ar || work[+i].ar;
     }
-    let step = 0, total = pendingNew.length + Object.keys(newImages).length + removed.length + 1;
-
-    // 1. 上传新图（已成功上传过的自动跳过，重试不产生重复文件）
     for (const item of pendingNew) {
-      if (!uploaded.has(item.info.filename)) {
-        step++;
-        setStatus($("save-status"), `<span class="spin"></span>上传照片 ${step}/${total}：${item.meta.title}`);
-        await putFile(item.info.filename, `新增作品：${item.meta.title}`, item.info.contentB64);
-        uploaded.add(item.info.filename);
-      }
+      work.push({ src: item.info.filename, preview: item.info.previewFilename || "", ...item.meta });
+    }
+
+    // 需要清理的旧文件（被替换/被删除的照片原图与预览图）
+    const orphanFiles = new Set();
+    for (const i of Object.keys(newImages)) {
+      const old = photos[+i];
+      if (old.src && old.src !== newImages[i].filename) orphanFiles.add(old.src);
+      if (old.preview) orphanFiles.add(old.preview);
+    }
+    for (const p of removed) {
+      if (p.src) orphanFiles.add(p.src);
+      if (p.preview) orphanFiles.add(p.preview);
+    }
+
+    // 待上传文件清单（原图 + 预览图）
+    const uploads = [];
+    for (const item of pendingNew) {
+      uploads.push({ path: item.info.filename, content: item.info.contentB64, label: item.meta.title });
+      if (item.info.previewFilename) uploads.push({ path: item.info.previewFilename, content: item.info.previewB64, label: item.meta.title + "（预览图）" });
     }
     for (const i of Object.keys(newImages)) {
-      const f = newImages[i].filename;
-      if (!uploaded.has(f)) {
-        step++;
-        setStatus($("save-status"), `<span class="spin"></span>上传替换图 ${step}/${total}`);
-        await putFile(f, `替换作品图：${photos[+i].title || ""}`, newImages[i].contentB64);
-        uploaded.add(f);
-      }
+      uploads.push({ path: newImages[i].filename, content: newImages[i].contentB64, label: photos[+i].title || "" });
+      if (newImages[i].previewFilename) uploads.push({ path: newImages[i].previewFilename, content: newImages[i].previewB64, label: (photos[+i].title || "") + "（预览图）" });
     }
-    // 2. 删除旧图
-    for (const p of removed) {
+
+    let step = 0, total = uploads.length + orphanFiles.size + 1;
+    for (const u of uploads) {
+      if (uploaded.has(u.path)) continue;   // 重试时跳过已上传的
       step++;
-      setStatus($("save-status"), `<span class="spin"></span>删除照片 ${step}/${total}`);
-      const sha = await getPhotoSha(p.src);
-      if (sha) await delFile(p.src, `删除作品：${p.title || p.src}`, sha);
+      setStatus($("save-status"), `<span class="spin"></span>上传文件 ${step}/${total}：${u.label}`);
+      await putFile(u.path, `上传作品文件：${u.label}`, u.content);
+      uploaded.add(u.path);
     }
-    // 3. 写回数据文件
+    for (const path of orphanFiles) {
+      step++;
+      setStatus($("save-status"), `<span class="spin"></span>清理旧文件 ${step}/${total}`);
+      const sha = await getPhotoSha(path);
+      if (sha) await delFile(path, `清理旧文件`, sha);
+    }
+    // 写回数据文件
     setStatus($("save-status"), `<span class="spin"></span>发布数据文件 ${total}/${total}`);
     const dataContent = "window.GALLERY_PHOTOS = " + JSON.stringify(work, null, 2) + ";\n";
     await putFile(CFG.dataPath, `更新作品数据（共 ${work.length} 件）`, b64enc(dataContent), shas[CFG.dataPath]);
 
-    // 4. 一致性校验：回读远端文件，确认内容与本地工作副本一致
+    // 一致性校验：回读远端文件，确认内容与本地工作副本一致
     const check = await gh(CFG.dataPath, { qs: "ref=" + CFG.branch });
     const parsed = parseJsData(b64dec(check.content));
     if (parsed.length !== work.length || parsed.some((p, i) => p.src !== work[i].src || p.title !== work[i].title)) {

@@ -93,9 +93,10 @@ window.GALLERY_API_URL = "/api/photos";
       `<span>收录 <b>${photos.length} 帧</b></span>` +
       `<span>创作方向 <b>${categories().length} 类</b></span>`;
 
-    /* 封面大图 */
+    /* 封面大图（若有预览图则用预览图，加载更快） */
     const heroBg = $("hero-bg");
-    heroBg.src = hero.src || (photos[0] && photos[0].src) || "";
+    const heroPhoto = photos.find(p => p.src === hero.src);
+    heroBg.src = (heroPhoto && heroPhoto.preview) || hero.src || (photos[0] && (photos[0].preview || photos[0].src)) || "";
     heroBg.alt = title;
 
     /* 引言 */
@@ -174,7 +175,7 @@ window.GALLERY_API_URL = "/api/photos";
     art.className = "project";
     art.innerHTML =
       `<div class="proj-media" tabindex="0" role="button" aria-label="查看大图：${p.title || ""}">
-         <img src="${p.src}" alt="${p.title || ""}" loading="lazy" decoding="async">
+         <img src="${p.preview || p.src}" alt="${p.title || ""}" loading="lazy" decoding="async">
          <span class="view">查看大图 ＋</span>
        </div>
        <div class="proj-info">
@@ -230,7 +231,7 @@ window.GALLERY_API_URL = "/api/photos";
     const stage = $("lb-stage");
     stage.classList.remove("zoomed");
     const img = $("lb-img");
-    img.src = p.src;               // 始终加载原图，不经压缩
+    img.src = p.preview || p.src;   // 浏览用预览图（1:1 足够清晰）；下载原图始终是无损原图
     img.alt = p.title || "";
     $("lb-index").textContent = `${pad(lbIdx + 1)} / ${pad(lbList.length)}`;
     $("lb-title").textContent = p.title || "";
