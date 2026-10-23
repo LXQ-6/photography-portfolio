@@ -84,6 +84,26 @@ details.help ol{margin:.6rem 0 .6rem 1.2em;line-height:2}
 .spin{display:inline-block;width:.9em;height:.9em;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;vertical-align:-2px;animation:sp 1s linear infinite;margin-right:.4em}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media(max-width:640px){.card{padding:1rem}header.top h1{font-size:1.2rem}}
+
+/* 悬浮回顶/底按钮（与作品集同款玻璃胶囊，抬高避开底部操作条） */
+.float-nav{
+  position:fixed;right:clamp(.9rem,2vw,1.6rem);bottom:5.2rem;z-index:60;
+  display:flex;flex-direction:column;
+  background:rgba(30,26,22,.4);
+  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  border:1px solid var(--glass-line);border-radius:999px;overflow:hidden;
+  box-shadow:inset 0 1px 0 var(--glass-hi),0 12px 32px rgba(0,0,0,.4);
+}
+.float-nav button{
+  width:2.7rem;height:2.7rem;border:none;background:transparent;
+  color:var(--ink-dim);display:flex;align-items:center;justify-content:center;
+  transition:background .3s var(--ease),color .3s var(--ease),transform .15s var(--ease);
+}
+.float-nav button+button{border-top:1px solid var(--glass-line)}
+.float-nav button:hover{background:rgba(201,158,99,.16);color:var(--accent)}
+.float-nav button:active{transform:scale(.9)}
+.float-nav svg{display:block}
+@media(max-width:640px){.float-nav button{width:2.35rem;height:2.35rem}}
 </style>
 </head>
 <body>
@@ -149,7 +169,14 @@ details.help ol{margin:.6rem 0 .6rem 1.2em;line-height:2}
     <div class="grid">
       <div class="wide"><label class="f">封面主标题（用换行分成两行）</label><textarea id="site-line"></textarea></div>
       <div><label class="f">标题下英文行</label><input type="text" id="site-en"></div>
-      <div><label class="f">封面大图</label><select id="site-hero"></select></div>
+      <div>
+        <label class="f">封面大图</label>
+        <select id="site-hero"></select>
+        <label class="f" style="margin-top:.9rem">或上传自定义封面（jpg / png / webp / heic）</label>
+        <input type="file" id="site-hero-file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif">
+        <img id="site-hero-preview" class="pending-img" alt="" hidden>
+        <p class="file-note" id="site-hero-note">从上方选择已上传作品，或上传任意新图作为封面（保存时上传）</p>
+      </div>
     </div>
     <label class="f">封面简介（标题下的一行字）</label>
     <textarea id="site-bio"></textarea>
@@ -176,7 +203,17 @@ details.help ol{margin:.6rem 0 .6rem 1.2em;line-height:2}
   画幅（横/竖）在上传照片时按宽高自动判断；如需调整可编辑 photos-data.js 里的 ar 字段。</p>
 </div>
 
-<script src="assets/photos-data.js?v=7"></script>
+<!-- 快速回到顶部 / 底部 -->
+<div class="float-nav" role="navigation" aria-label="快速定位">
+  <button id="to-top" aria-label="回到顶部" title="回到顶部">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>
+  </button>
+  <button id="to-bottom" aria-label="跳至底部" title="跳至底部">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+  </button>
+</div>
+
+<script src="assets/photos-data.js?v=10"></script>
 <script>
 (function(){
 "use strict";
@@ -466,8 +503,45 @@ $("btn-add").addEventListener("click", () => {
 });
 
 /* ---------- 站点文案 ---------- */
+let pendingHero = null;   // 待上传的自定义封面 {filename, contentB64, previewFilename, previewB64, dataUrl}
+$("site-hero-file").addEventListener("change", async () => {
+  const file = $("site-hero-file").files[0];
+  const note = $("site-hero-note");
+  if (!file) { pendingHero = null; $("site-hero-preview").hidden = true; note.textContent = "从上方选择已上传作品，或上传任意新图作为封面（保存时上传）"; return; }
+  try {
+    note.textContent = "解析图片中，请稍候…";
+    pendingHero = await readImage(file);
+    const ts = Date.now();
+    pendingHero.filename = "photos/hero-" + ts + "." + pendingHero.filename.split(".").pop();
+    if (pendingHero.previewFilename) pendingHero.previewFilename = "photos/hero-" + ts + "-p.jpg";
+    $("site-hero-preview").hidden = false;
+    $("site-hero-preview").src = pendingHero.dataUrl;
+    note.textContent = `已选 ${file.name}（${pendingHero.width}×${pendingHero.height}${pendingHero.previewFilename ? "，已生成预览图" : ""}），点"保存文案并发布"上传`;
+    const sel = $("site-hero");
+    [...sel.options].forEach(o => { if (o.value === "__pending__") o.remove(); });
+    const opt = document.createElement("option");
+    opt.value = "__pending__";
+    opt.textContent = "新上传的封面（保存时上传）";
+    sel.insertBefore(opt, sel.firstChild);
+    sel.value = "__pending__";
+  } catch (e) {
+    pendingHero = null;
+    $("site-hero-preview").hidden = true;
+    note.textContent = "读取失败：" + e.message;
+  }
+});
+$("site-hero").addEventListener("change", () => {
+  if ($("site-hero").value !== "__pending__") {
+    pendingHero = null;
+    $("site-hero-preview").hidden = true;
+    $("site-hero-note").textContent = "从上方选择已上传作品，或上传任意新图作为封面（保存时上传）";
+  }
+});
 function renderSiteForm() {
   if (!siteCopy) return;
+  pendingHero = null;
+  $("site-hero-preview").hidden = true;
+  $("site-hero-note").textContent = "从上方选择已上传作品，或上传任意新图作为封面（保存时上传）";
   const hero = siteCopy.hero || {};
   $("site-line").value = (hero.line || "").replace(/\n/g, "\n");
   $("site-en").value = hero.en || "";
@@ -479,6 +553,7 @@ function renderSiteForm() {
   $("site-about-bio").value = (siteCopy.about && siteCopy.about.bio) || (localSite.about && localSite.about.bio) || "";
   $("site-footer-copy").value = siteCopy.footerCopy || localSite.footerCopy || "";
   const sel = $("site-hero");
+  [...sel.options].forEach(o => { if (o.value === "__pending__") o.remove(); });
   const opts = photos.map(p => `<option value="${p.src}" ${p.src === hero.src ? "selected" : ""}>${p.title || p.src}（${p.category || ""}）</option>`).join("");
   sel.innerHTML = hero.src && !photos.some(p => p.src === hero.src)
     ? `<option value="${hero.src}" selected>${hero.src}（当前）</option>` + opts
@@ -490,23 +565,57 @@ $("btn-site").addEventListener("click", async () => {
   btn.disabled = true;
   try {
     setStatus($("site-status"), '<span class="spin"></span>正在发布文案…');
+    // 记录旧封面（用于清理被替换的独立封面文件；仅限 hero- 前缀，绝不误删作品照片）
+    const prevHeroSrc = siteCopy.hero ? (siteCopy.hero.src || "") : "";
+    const prevHeroPreview = siteCopy.hero ? (siteCopy.hero.preview || "") : "";
     siteCopy.hero = siteCopy.hero || {};
     siteCopy.hero.line = $("site-line").value.replace(/\r/g, "");
     siteCopy.hero.en = $("site-en").value.trim();
     siteCopy.hero.bio = $("site-bio").value.trim();
-    siteCopy.hero.src = $("site-hero").value;
     siteCopy.statement = siteCopy.statement || {};
     siteCopy.statement.lead = $("site-lead").value;
     siteCopy.about = siteCopy.about || {};
     siteCopy.about.en = $("site-about-en").value.trim();
     siteCopy.about.bio = $("site-about-bio").value.trim();
     siteCopy.footerCopy = $("site-footer-copy").value.trim();
+
+    // 自定义封面：先把图片文件传上去，再写数据
+    const selVal = $("site-hero").value;
+    if (selVal === "__pending__" && pendingHero) {
+      setStatus($("site-status"), '<span class="spin"></span>上传封面图片…');
+      if (!uploaded.has(pendingHero.filename)) {
+        await putFile(pendingHero.filename, "上传自定义封面", pendingHero.contentB64);
+        uploaded.add(pendingHero.filename);
+      }
+      if (pendingHero.previewFilename && !uploaded.has(pendingHero.previewFilename)) {
+        await putFile(pendingHero.previewFilename, "上传自定义封面（预览图）", pendingHero.previewB64);
+        uploaded.add(pendingHero.previewFilename);
+      }
+      siteCopy.hero.src = pendingHero.filename;
+      siteCopy.hero.preview = pendingHero.previewFilename || "";
+    } else {
+      siteCopy.hero.src = selVal;
+      // 保持当前独立封面时沿用其预览图；改选作品照片时清空（画廊会自动用该照片的预览图）
+      siteCopy.hero.preview = (selVal === prevHeroSrc) ? prevHeroPreview : "";
+    }
+
     const content = "/* ============================================================\n   拾光影集 · 站点文案（本文件由 admin.html 管理页自动维护）\n   作品数据在 assets/photos-data.js；手动编辑请保持 JSON 格式\n   ============================================================ */\n\nwindow.GALLERY_DATA = " + JSON.stringify({ site: siteCopy }, null, 2) + ";\n";
     await putFile("assets/data.js", "更新站点文案", b64enc(content), dataSha);
     const check = await gh("assets/data.js", { qs: "ref=" + CFG.branch });
     const parsed = parseJsData(b64dec(check.content)).site;
     dataSha = check.sha;
     if (!parsed.hero || parsed.hero.line !== siteCopy.hero.line) throw new Error("一致性校验未通过，请重试");
+
+    // 清理被替换的旧独立封面（hero- 前缀的独立文件）
+    if (selVal !== prevHeroSrc && /^photos\/hero-/.test(prevHeroSrc)) {
+      const sha = await getPhotoSha(prevHeroSrc);
+      if (sha) await delFile(prevHeroSrc, "清理旧封面文件", sha);
+    }
+    if (/^photos\/hero-/.test(prevHeroPreview) && prevHeroPreview !== siteCopy.hero.preview) {
+      const sha = await getPhotoSha(prevHeroPreview);
+      if (sha) await delFile(prevHeroPreview, "清理旧封面预览图", sha);
+    }
+    pendingHero = null;
     setStatus($("site-status"), "✓ 文案已发布！GitHub Pages 约 1 分钟后自动更新", "ok");
   } catch (e) {
     setStatus($("site-status"), "保存失败：" + e.message, "err");
@@ -592,6 +701,10 @@ $("btn-save").addEventListener("click", async () => {
     btn.disabled = false;
   }
 });
+
+/* 悬浮按钮：回顶部 / 跳底部 */
+document.querySelector(".float-nav #to-top").addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+document.querySelector(".float-nav #to-bottom").addEventListener("click", () => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" }));
 
 $("btn-reload").addEventListener("click", () => {
   if (dirty && !confirm("放弃当前所有未保存的修改？")) return;

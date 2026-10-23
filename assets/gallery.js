@@ -121,10 +121,10 @@ window.GALLERY_API_URL = "/api/photos";
       `<span>收录 <b>${photos.length} 帧</b></span>` +
       `<span>创作方向 <b>${categories().length} 类</b></span>`;
 
-    /* 封面大图（若有预览图则用预览图，加载更快） */
+    /* 封面大图：优先独立封面的预览图 → 所选作品的预览图 → 原图 */
     const heroBg = $("hero-bg");
     const heroPhoto = photos.find(p => p.src === hero.src);
-    heroBg.src = (heroPhoto && heroPhoto.preview) || hero.src || (photos[0] && (photos[0].preview || photos[0].src)) || "";
+    heroBg.src = hero.preview || (heroPhoto && heroPhoto.preview) || hero.src || (photos[0] && (photos[0].preview || photos[0].src)) || "";
     heroBg.alt = title;
 
     /* 引言 */
