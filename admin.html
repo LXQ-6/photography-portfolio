@@ -15,6 +15,8 @@
   --accent:#c99e63;--accent-deep:#9a7443;--danger:#c96b63;
   --serif:"Noto Serif SC",serif;--sans:"Noto Sans SC",sans-serif;
   --ease:cubic-bezier(.22,.61,.36,1);
+  --glass-bg:rgba(30,26,22,.45);--glass-blur:blur(22px) saturate(175%);
+  --glass-line:rgba(233,226,214,.15);--glass-hi:rgba(255,255,255,.16);
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-weight:300;line-height:1.7;letter-spacing:.02em;-webkit-font-smoothing:antialiased}
@@ -75,7 +77,10 @@ details.help ol{margin:.6rem 0 .6rem 1.2em;line-height:2}
 .pending-img{max-width:100%;max-height:180px;border:1px solid var(--line);margin-top:.5rem}
 
 /* 操作条 */
-.actions{position:sticky;bottom:0;background:linear-gradient(rgba(22,19,16,0),rgba(22,19,16,.9) 30%);padding:1.6rem 0 .8rem;display:flex;gap:.8rem;align-items:center;flex-wrap:wrap}
+.actions{position:sticky;bottom:0;background:var(--glass-bg);
+  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  border-top:1px solid var(--glass-line);box-shadow:inset 0 1px 0 var(--glass-hi);
+  padding:1.6rem 0 .8rem;display:flex;gap:.8rem;align-items:center;flex-wrap:wrap}
 .spin{display:inline-block;width:.9em;height:.9em;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;vertical-align:-2px;animation:sp 1s linear infinite;margin-right:.4em}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media(max-width:640px){.card{padding:1rem}header.top h1{font-size:1.2rem}}
