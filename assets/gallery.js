@@ -40,7 +40,12 @@ window.GALLERY_API_URL = "/api/photos";
   /* ---------- 导航滚动态 + 回顶部/底部按钮 ---------- */
   function bindNav() {
     const nav = $("nav");
-    const onScroll = () => nav.classList.toggle("scrolled", window.scrollY > 40);
+    const onScroll = () => {
+      nav.classList.toggle("scrolled", window.scrollY > 40);
+      // 阅读进度条
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      $("progress-bar").style.width = (max > 0 ? (window.scrollY / max) * 100 : 0) + "%";
+    };
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
 
@@ -78,14 +83,13 @@ window.GALLERY_API_URL = "/api/photos";
     /* Hero */
     const hero = site.hero || {};
     $("hero-kicker").textContent = categories().join("  ·  ");
-    // 诗意主标题：\n 换行；只更新文字节点，保留 .en 英文行元素
+    // 诗意主标题：\n 换行；每行包一层 span 做逐行入场动画
     const lineEl = $("hero-text");
-    lineEl.innerHTML = "";
-    (hero.line || title).split("\n").forEach((seg, i) => {
-      if (i > 0) lineEl.appendChild(document.createElement("br"));
-      lineEl.appendChild(document.createTextNode(seg));
-    });
+    lineEl.innerHTML = (hero.line || title).split("\n")
+      .map((seg, i) => `<span class="hl" style="animation-delay:${(.15 + i * .18).toFixed(2)}s">${seg}</span>`)
+      .join("<br>");
     $("hero-en").textContent = hero.en || "PHOTOGRAPHY PORTFOLIO";
+    $("hero-side").textContent = hero.en || "PHOTOGRAPHY PORTFOLIO";   // 封面左侧竖排英文
     $("hero-sub").textContent = hero.bio || site.description || "";
 
     /* Hero meta：作品数 / 分类数（自动统计） */
@@ -166,7 +170,18 @@ window.GALLERY_API_URL = "/api/photos";
     }
 
     projectRows = [...listEl.querySelectorAll(".project")];
-    projectRows.forEach(el => { if (!reduceMotion) el.classList.add("reveal"); observeReveals(); });
+    // 入场 stagger：首屏内的元素依次延迟淡入，翻页滚动后的元素即时出现
+    if (!reduceMotion) {
+      let vi = 0;
+      [...listEl.children].forEach(el => {
+        el.classList.add("reveal");
+        if (el.getBoundingClientRect().top < window.innerHeight) {
+          el.style.transitionDelay = Math.min(vi++ * 70, 560) + "ms";
+          el.addEventListener("transitionend", () => { el.style.transitionDelay = ""; }, { once: true });
+        }
+      });
+      observeReveals();
+    }
   }
 
   function buildProject(p, all) {
@@ -179,6 +194,7 @@ window.GALLERY_API_URL = "/api/photos";
          <span class="view">查看大图 ＋</span>
        </div>
        <div class="proj-info">
+         <span class="big-no" aria-hidden="true">${no}</span>
          <span class="no">No.${no} / ${pad(all.length)}</span>
          <h3></h3>
          <span class="en-title"></span>
@@ -231,7 +247,8 @@ window.GALLERY_API_URL = "/api/photos";
     const stage = $("lb-stage");
     stage.classList.remove("zoomed");
     const img = $("lb-img");
-    img.src = p.preview || p.src;   // 浏览用预览图（1:1 足够清晰）；下载原图始终是无损原图
+    img.classList.remove("fade");       // 先淡出，新图加载完成后淡入（交叉过渡）
+    img.src = p.preview || p.src;       // 浏览用预览图（1:1 足够清晰）；下载原图始终是无损原图
     img.alt = p.title || "";
     $("lb-index").textContent = `${pad(lbIdx + 1)} / ${pad(lbList.length)}`;
     $("lb-title").textContent = p.title || "";
@@ -262,7 +279,7 @@ window.GALLERY_API_URL = "/api/photos";
   }
 
   function closeLightbox() {
-    $("lightbox").classList.remove("open");
+    $("lightbox").classList.remove("open", "idle");
     document.body.style.overflow = "";
     if (lastFocus) lastFocus.focus();
   }
@@ -276,6 +293,19 @@ window.GALLERY_API_URL = "/api/photos";
     $("lb-close").addEventListener("click", closeLightbox);
     $("lb-prev").addEventListener("click", (e) => { e.stopPropagation(); stepLightbox(-1); });
     $("lb-next").addEventListener("click", (e) => { e.stopPropagation(); stepLightbox(1); });
+    // 新图加载完成后淡入
+    $("lb-img").addEventListener("load", () => $("lb-img").classList.add("fade"));
+
+    // 沉浸模式：2.8 秒无操作自动隐藏上下工具条，动一下鼠标/触摸即恢复
+    const lb = $("lightbox");
+    let idleTimer = null;
+    const wake = () => {
+      lb.classList.remove("idle");
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => lb.classList.add("idle"), 2800);
+    };
+    ["mousemove", "touchstart", "keydown"].forEach(ev => lb.addEventListener(ev, wake, { passive: true }));
+    lb.addEventListener("mouseleave", () => lb.classList.add("idle"));
     // 点击图片本体切换 1:1 原图尺寸
     $("lb-img").addEventListener("click", (e) => {
       e.stopPropagation();
