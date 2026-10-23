@@ -56,9 +56,11 @@ window.GALLERY_API_URL = "/api/photos";
       if (gi >= 0 && photos[gi]) {
         if (nowEl.dataset.gi !== String(gi)) {
           nowEl.dataset.gi = String(gi);
+          const row = projectRows.find(r => +r.dataset.gi === gi);
+          const dno = row ? +row.dataset.dno : gi + 1;   // 用与作品行一致的显示序号
           nowEl.innerHTML = "";
           const b = document.createElement("b");
-          b.textContent = "No." + pad(gi + 1);
+          b.textContent = "No." + pad(dno);
           nowEl.appendChild(b);
           nowEl.appendChild(document.createTextNode(photos[gi].title || ""));
         }
@@ -180,19 +182,22 @@ window.GALLERY_API_URL = "/api/photos";
     const shown = activeCategory === "全部" ? photos : photos.filter(p => p.category === activeCategory);
     $("photo-count").textContent = `${activeCategory} · ${shown.length} 帧`;
 
+    // 编号按"显示顺序"编（分组排版后仍连续），而非数据文件里的全局序号
+    let di = 0;
     if (activeCategory === "全部") {
       categories().forEach(cat => {
         const label = document.createElement("p");
         label.className = "cat-label";
         label.textContent = `${cat}`;
         listEl.appendChild(label);
-        photos.filter(p => p.category === cat).forEach(p => listEl.appendChild(buildProject(p, shown)));
+        photos.filter(p => p.category === cat).forEach(p => { di++; listEl.appendChild(buildProject(p, shown, di)); });
       });
     } else {
-      shown.forEach(p => listEl.appendChild(buildProject(p, shown)));
+      shown.forEach(p => { di++; listEl.appendChild(buildProject(p, shown, di)); });
     }
 
     projectRows = [...listEl.querySelectorAll(".project")];
+    projectRows.forEach((row, i) => row.dataset.dno = i + 1);   // 显示序号，供导航上下文指示使用
     // 入场 stagger：首屏内的元素依次延迟淡入，翻页滚动后的元素即时出现
     if (!reduceMotion) {
       let vi = 0;
@@ -207,8 +212,8 @@ window.GALLERY_API_URL = "/api/photos";
     }
   }
 
-  function buildProject(p, all) {
-    const no = pad(all.indexOf(p) + 1);
+  function buildProject(p, all, seq) {
+    const no = pad(seq);
     const art = document.createElement("article");
     art.className = "project";
     art.dataset.gi = photos.indexOf(p);   // 全局索引，供导航上下文指示使用
