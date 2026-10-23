@@ -317,12 +317,16 @@ window.GALLERY_API_URL = "/api/photos";
       const goingZoomed = !stage.classList.contains("zoomed");
       stage.classList.toggle("zoomed");
       if (goingZoomed) {
-        // 关键：同一帧内"瞬时"滚动，直接把点击位置定到视野中心。
-        // 不能用 smooth——那会从默认左上角 (0,0) 滑过来，产生抖动。
-        const maxX = Math.max(0, img.naturalWidth - stage.clientWidth);
-        const maxY = Math.max(0, img.naturalHeight - stage.clientHeight);
-        stage.scrollLeft = Math.min(Math.max(rx * img.naturalWidth - stage.clientWidth / 2, 0), maxX);
-        stage.scrollTop = Math.min(Math.max(ry * img.naturalHeight - stage.clientHeight / 2, 0), maxY);
+        // 关键：同步布局（读尺寸即触发重排），直接测量放大后的真实位置，
+        // 把点击点换算成滚动内容绝对坐标后瞬时定位到视野中心。
+        // 不用 smooth——那会从默认左上角 (0,0) 滑过来产生抖动；
+        // 也不推算尺寸——不同浏览器滚动条占位不同会导致偏差。
+        const stageRect = stage.getBoundingClientRect();
+        const r2 = img.getBoundingClientRect();       // 此刻已是 1:1 放大后的布局
+        const px = stage.scrollLeft + (r2.left - stageRect.left) + rx * r2.width;
+        const py = stage.scrollTop + (r2.top - stageRect.top) + ry * r2.height;
+        stage.scrollLeft = Math.max(0, px - stage.clientWidth / 2);
+        stage.scrollTop = Math.max(0, py - stage.clientHeight / 2);
       }
     });
     $("lb-stage").addEventListener("click", (e) => {
