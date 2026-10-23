@@ -204,19 +204,26 @@ footer{padding:2.6rem clamp(1.2rem,4vw,3.2rem);border-top:1px solid var(--line);
 footer .f-logo{font-family:var(--serif);color:var(--ink-dim);letter-spacing:.28em}
 footer .f-copy{letter-spacing:.2em}
 
-/* ---------- 回顶部 / 底部悬浮按钮 ---------- */
+/* ---------- 回顶部 / 底部悬浮按钮（胶囊组） ---------- */
 .float-nav{
   position:fixed;right:clamp(.9rem,2vw,1.6rem);bottom:clamp(.9rem,2vw,1.6rem);z-index:60;
-  display:flex;flex-direction:column;gap:.5rem;
+  display:flex;flex-direction:column;
+  background:rgba(30,26,22,.55);backdrop-filter:blur(12px);
+  border:1px solid var(--line-strong);border-radius:999px;overflow:hidden;
+  box-shadow:0 12px 32px rgba(0,0,0,.4);
 }
 .float-nav button{
-  width:2.6rem;height:2.6rem;border-radius:50%;
-  background:rgba(30,26,22,.72);backdrop-filter:blur(8px);
-  border:1px solid var(--line-strong);color:var(--ink);
-  font-size:1rem;line-height:1;cursor:pointer;transition:all .3s;
+  width:2.7rem;height:2.7rem;border:none;background:transparent;
+  color:var(--ink-dim);display:flex;align-items:center;justify-content:center;
+  transition:background .3s var(--ease),color .3s var(--ease),transform .15s var(--ease);
 }
-.float-nav button:hover{background:var(--ink);color:#1a150f}
-@media(max-width:640px){.float-nav button{width:2.3rem;height:2.3rem}}
+.float-nav button+button{border-top:1px solid var(--line)}
+.float-nav button:hover{background:rgba(201,158,99,.16);color:var(--accent)}
+.float-nav button:active{transform:scale(.9)}
+.float-nav svg{display:block;transition:transform .3s var(--ease)}
+.float-nav button:hover svg{transform:translateY(-1px) scale(1.1)}
+.float-nav button:last-child:hover svg{transform:translateY(1px) scale(1.1)}
+@media(max-width:640px){.float-nav button{width:2.35rem;height:2.35rem}}
 
 /* ---------- 大图浏览 ---------- */
 .lightbox{

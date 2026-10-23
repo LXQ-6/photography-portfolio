@@ -306,10 +306,27 @@ window.GALLERY_API_URL = "/api/photos";
     };
     ["mousemove", "touchstart", "keydown"].forEach(ev => lb.addEventListener(ev, wake, { passive: true }));
     lb.addEventListener("mouseleave", () => lb.classList.add("idle"));
-    // 点击图片本体切换 1:1 原图尺寸
+    // 点击图片：以点击位置为中心放大到 1:1 原图（再次点击还原）
     $("lb-img").addEventListener("click", (e) => {
       e.stopPropagation();
-      $("lb-stage").classList.toggle("zoomed");
+      const stage = $("lb-stage");
+      const img = $("lb-img");
+      const rect = img.getBoundingClientRect();
+      const rx = (e.clientX - rect.left) / rect.width;    // 点击点在图内的相对位置
+      const ry = (e.clientY - rect.top) / rect.height;
+      const goingZoomed = !stage.classList.contains("zoomed");
+      stage.classList.toggle("zoomed");
+      if (goingZoomed) {
+        // 放大后把点击的位置平滑滚动到视野中央
+        requestAnimationFrame(() => {
+          const r2 = img.getBoundingClientRect();
+          stage.scrollTo({
+            left: Math.max(0, Math.min(rx * r2.width - stage.clientWidth / 2, Math.max(0, r2.width - stage.clientWidth))),
+            top: Math.max(0, Math.min(ry * r2.height - stage.clientHeight / 2, Math.max(0, r2.height - stage.clientHeight))),
+            behavior: "smooth"
+          });
+        });
+      }
     });
     $("lb-stage").addEventListener("click", (e) => {
       if (e.target === e.currentTarget) closeLightbox();
