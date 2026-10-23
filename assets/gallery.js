@@ -40,11 +40,33 @@ window.GALLERY_API_URL = "/api/photos";
   /* ---------- 导航滚动态 + 回顶部/底部按钮 ---------- */
   function bindNav() {
     const nav = $("nav");
+    const nowEl = $("nav-now");
     const onScroll = () => {
       nav.classList.toggle("scrolled", window.scrollY > 40);
       // 阅读进度条
       const max = document.documentElement.scrollHeight - window.innerHeight;
       $("progress-bar").style.width = (max > 0 ? (window.scrollY / max) * 100 : 0) + "%";
+      // 上下文指示：视口中线落在哪个作品行上，就显示哪件作品
+      const mid = window.innerHeight * 0.5;
+      let gi = -1;
+      for (const row of projectRows) {
+        const r = row.getBoundingClientRect();
+        if (r.top <= mid && r.bottom >= mid) { gi = +row.dataset.gi; break; }
+      }
+      if (gi >= 0 && photos[gi]) {
+        if (nowEl.dataset.gi !== String(gi)) {
+          nowEl.dataset.gi = String(gi);
+          nowEl.innerHTML = "";
+          const b = document.createElement("b");
+          b.textContent = "No." + pad(gi + 1);
+          nowEl.appendChild(b);
+          nowEl.appendChild(document.createTextNode(photos[gi].title || ""));
+        }
+        nowEl.classList.add("show");
+      } else {
+        nowEl.classList.remove("show");
+        nowEl.dataset.gi = "";
+      }
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
@@ -109,6 +131,7 @@ window.GALLERY_API_URL = "/api/photos";
 
     /* 关于（独立文案，缺省回退到封面文案） */
     $("about-name").textContent = title;
+    $("about-giant").textContent = title || "拾光影集";   // 巨型背景字跟随站点名
     $("about-en").textContent = (site.about && site.about.en) || hero.en || "PHOTOGRAPHY PORTFOLIO";
     $("about-bio").textContent = (site.about && site.about.bio) || hero.bio || site.description || "";
     $("footer-copy").textContent = site.footerCopy || "";
@@ -188,6 +211,7 @@ window.GALLERY_API_URL = "/api/photos";
     const no = pad(all.indexOf(p) + 1);
     const art = document.createElement("article");
     art.className = "project";
+    art.dataset.gi = photos.indexOf(p);   // 全局索引，供导航上下文指示使用
     art.innerHTML =
       `<div class="proj-media" tabindex="0" role="button" aria-label="查看大图：${p.title || ""}">
          <img src="${p.preview || p.src}" alt="${p.title || ""}" loading="lazy" decoding="async">
