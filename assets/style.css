@@ -291,6 +291,7 @@ footer .f-copy{letter-spacing:.2em}
   position:absolute;inset:0;
   display:flex;align-items:center;justify-content:center;
   min-height:0;padding:4.4rem clamp(3.4rem,7vw,6.5rem) 5rem;cursor:zoom-in;overflow:auto;
+  touch-action:pan-x pan-y;   /* 单指滚动保留；双指捏合交给 JS 处理（iOS 关键） */
 }
 .lb-stage img{max-width:100%;max-height:100%;object-fit:contain;box-shadow:0 30px 80px rgba(0,0,0,.55);opacity:0;transition:opacity .4s var(--ease)}
 .lb-stage img.fade{opacity:1}

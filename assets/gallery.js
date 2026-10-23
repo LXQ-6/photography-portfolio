@@ -367,11 +367,14 @@ window.GALLERY_API_URL = "/api/photos";
       else if (e.key === "ArrowLeft") stepLightbox(-1);
       else if (e.key === "ArrowRight") stepLightbox(1);
     });
-    // 触屏：单指滑动切换；双指捏合进入/退出 1:1 原图缩放
-    let tx = 0, pinchStart = 0, zoomedAtStart = false;
+    // 触屏：单指滑动切换；双指捏合进入/退出 1:1 缩放
+    // （.lb-stage 设了 touch-action:pan-x pan-y，浏览器不会在这里做页面捏合缩放，
+    //   iOS/安卓的双指手势都会以 touch 事件交给我们自己处理）
+    let tx = 0, pinchStart = 0, zoomedAtStart = false, pinched = false;
     const stage = $("lb-stage");
     stage.addEventListener("touchstart", (e) => {
       if (e.touches.length === 2) {
+        pinched = true;
         pinchStart = Math.hypot(
           e.touches[0].clientX - e.touches[1].clientX,
           e.touches[0].clientY - e.touches[1].clientY
@@ -384,7 +387,7 @@ window.GALLERY_API_URL = "/api/photos";
     }, { passive: true });
     stage.addEventListener("touchmove", (e) => {
       if (e.touches.length === 2 && pinchStart > 0) {
-        e.preventDefault();   // 捏合时阻止浏览器整页缩放
+        e.preventDefault();
         const d = Math.hypot(
           e.touches[0].clientX - e.touches[1].clientX,
           e.touches[0].clientY - e.touches[1].clientY
@@ -396,13 +399,15 @@ window.GALLERY_API_URL = "/api/photos";
     }, { passive: false });
     stage.addEventListener("touchend", (e) => {
       if (e.touches.length > 0) return;          // 捏合过程中不触发切换
-      const wasSwiping = stage.dataset.swiping === "1";
+      const wasSwiping = stage.dataset.swiping === "1" && !pinched;   // 捏合后不误触发切图
       stage.dataset.swiping = "";
-      pinchStart = 0;
+      pinchStart = 0; pinched = false;
       if (!wasSwiping) return;
       const dx = e.changedTouches[0].clientX - tx;
       if (Math.abs(dx) > 50) stepLightbox(dx < 0 ? 1 : -1);
     }, { passive: true });
+    // iOS Safari 的双指走 gesture 事件通道，单独拦截，防止捏合缩放整个网页
+    stage.addEventListener("gesturestart", (e) => e.preventDefault());
   }
 
   /* ---------- 启动 ---------- */
