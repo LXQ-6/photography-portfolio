@@ -317,15 +317,12 @@ window.GALLERY_API_URL = "/api/photos";
       const goingZoomed = !stage.classList.contains("zoomed");
       stage.classList.toggle("zoomed");
       if (goingZoomed) {
-        // 放大后把点击的位置平滑滚动到视野中央
-        requestAnimationFrame(() => {
-          const r2 = img.getBoundingClientRect();
-          stage.scrollTo({
-            left: Math.max(0, Math.min(rx * r2.width - stage.clientWidth / 2, Math.max(0, r2.width - stage.clientWidth))),
-            top: Math.max(0, Math.min(ry * r2.height - stage.clientHeight / 2, Math.max(0, r2.height - stage.clientHeight))),
-            behavior: "smooth"
-          });
-        });
+        // 关键：同一帧内"瞬时"滚动，直接把点击位置定到视野中心。
+        // 不能用 smooth——那会从默认左上角 (0,0) 滑过来，产生抖动。
+        const maxX = Math.max(0, img.naturalWidth - stage.clientWidth);
+        const maxY = Math.max(0, img.naturalHeight - stage.clientHeight);
+        stage.scrollLeft = Math.min(Math.max(rx * img.naturalWidth - stage.clientWidth / 2, 0), maxX);
+        stage.scrollTop = Math.min(Math.max(ry * img.naturalHeight - stage.clientHeight / 2, 0), maxY);
       }
     });
     $("lb-stage").addEventListener("click", (e) => {
