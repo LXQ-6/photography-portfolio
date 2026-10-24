@@ -1,30 +1,22 @@
-/* ============================================================
-   拾光影集 · 作品数据（由 admin.html 管理页自动维护）
-   ------------------------------------------------------------
-   ▸ src      原图（"下载原图"用，无损保存）
-   ▸ preview  浏览用预览图（2000px JPEG，由管理页上传时自动生成；
-              缺省时列表/灯箱直接使用 src）
-   ▸ 其余字段见 admin.html
-   ============================================================ */
-
 window.GALLERY_PHOTOS = [
   {
-    "src": "photos/01-dawn-ridges.jpg",
+    "src": "photos/1792865393651-1iszmu.jpg",
     "title": "山脊晨雾",
-    "en": "Dawn Ridges",
+    "en": "Gazing at the Waterfall",
     "category": "风光",
-    "place": "川西",
-    "ar": "16/10",
-    "desc": "层叠的山脊在晨雾里依次亮起，光从最远的一层开始往外走，等风把雾拉开一道口子。",
+    "place": "川西四姑娘山长坪沟",
+    "ar": "4/5",
+    "desc": "遥望虫虫脚瀑布",
     "exif": {
-      "camera": "Sony A7R IV",
-      "lens": "24-70mm f/2.8",
-      "focal": "45mm",
-      "aperture": "f/8",
-      "shutter": "1/125s",
-      "iso": "100",
-      "date": "2026-05"
-    }
+      "camera": "尼康Z72",
+      "lens": "24-70mm f/4",
+      "focal": "",
+      "aperture": "",
+      "shutter": "",
+      "iso": "",
+      "date": "2025-10-05"
+    },
+    "preview": "photos/p1792865394136-i4e2uz.jpg"
   },
   {
     "src": "photos/02-neon-alley.jpg",
