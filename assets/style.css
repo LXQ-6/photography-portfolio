@@ -353,7 +353,22 @@ footer .f-copy{letter-spacing:.2em}
   animation:loaderBreath 2.6s ease-in-out infinite;
 }
 .loader-en{font-size:.62rem;letter-spacing:.42em;text-indent:.42em;color:var(--accent)}
-.loader-bar{width:min(230px,58vw);height:1px;background:var(--line);overflow:hidden}
+.loader-bar{width:min(14.4rem,58vw);height:1px;background:var(--line);overflow:hidden}
 .loader-bar span{display:block;height:100%;width:0;background:var(--accent);transition:width .4s var(--ease)}
 .loader-pct{font-size:.72rem;letter-spacing:.24em;text-indent:.24em;color:var(--ink-faint);font-variant-numeric:tabular-nums}
 @keyframes loaderBreath{0%,100%{opacity:.5}50%{opacity:1}}
+
+/* ---------- 大屏增强：2.5K / 4K 显示器按比例放大（手机与普通屏不受影响） ---------- */
+/* 全站尺寸基本为 rem/clamp 单位，放大根字号即整体等比缩放 */
+@media(min-width:2000px){
+  html{font-size:18px}
+  .wrap{max-width:1360px}
+  .hero-inner{max-width:1360px}
+  .statement{max-width:980px}
+}
+@media(min-width:2800px){
+  html{font-size:21px}
+  .wrap{max-width:1600px}
+  .hero-inner{max-width:1600px}
+  .statement{max-width:1140px}
+}

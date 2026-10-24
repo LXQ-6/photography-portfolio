@@ -84,6 +84,9 @@ details.help ol{margin:.6rem 0 .6rem 1.2em;line-height:2}
 .spin{display:inline-block;width:.9em;height:.9em;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;vertical-align:-2px;animation:sp 1s linear infinite;margin-right:.4em}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media(max-width:640px){.card{padding:1rem}header.top h1{font-size:1.2rem}}
+/* 大屏增强：2.5K / 4K 显示器按比例放大 */
+@media(min-width:2000px){html{font-size:18px}.wrap{max-width:1120px}}
+@media(min-width:2800px){html{font-size:21px}.wrap{max-width:1200px}}
 
 /* 悬浮回顶/底按钮（与作品集同款玻璃胶囊，抬高避开底部操作条） */
 .float-nav{
