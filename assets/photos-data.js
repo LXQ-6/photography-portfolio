@@ -1,7 +1,7 @@
 window.GALLERY_PHOTOS = [
   {
     "src": "photos/1792865393651-1iszmu.jpg",
-    "title": "山脊晨雾",
+    "title": "遥望瀑布",
     "en": "Gazing at the Waterfall",
     "category": "风光",
     "place": "川西四姑娘山长坪沟",

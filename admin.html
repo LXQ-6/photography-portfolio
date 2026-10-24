@@ -216,7 +216,7 @@ details.help ol{margin:.6rem 0 .6rem 1.2em;line-height:2}
   </button>
 </div>
 
-<script src="assets/photos-data.js?v=10"></script>
+<script src="assets/photos-data.js?v=13"></script>
 <script>
 (function(){
 "use strict";
@@ -345,8 +345,8 @@ function renderCards() {
     box.appendChild(card);
   });
 
-  // 字段修改 → 写回工作副本
-  box.querySelectorAll("[data-k]").forEach(inp => {
+  // 字段修改 → 写回工作副本（只挂普通表单控件；contenteditable 标题单独处理）
+  box.querySelectorAll("input[data-k],textarea[data-k]").forEach(inp => {
     inp.addEventListener("change", () => {
       const i = +inp.dataset.i, k = inp.dataset.k, v = inp.value.trim();
       if (k === "date" || k === "camera" || k === "lens" || k === "extra") {
@@ -364,9 +364,31 @@ function renderCards() {
       } else {
         photos[i][k] = v;
       }
-      if (k === "title") { const b = box.querySelector(`.card-head b[data-i="${i}"]`); if (b) b.textContent = v; }
       dirty = true;
     });
+  });
+
+  // 中文标题是 contenteditable：change 事件在它上面不会触发（这是之前"改了标题没保存"的原因），
+  // 改用 input/blur 实时写回工作副本
+  box.querySelectorAll('b[data-k="title"]').forEach(b => {
+    const i = +b.dataset.i;
+    const sync = () => {
+      const v = b.textContent.trim();
+      if (v) {
+        if (v !== photos[i].title) { photos[i].title = v; dirty = true; }
+      } else {
+        b.textContent = photos[i].title || "";   // 标题不允许为空，清空即还原
+      }
+    };
+    b.addEventListener("input", sync);
+    b.addEventListener("blur", sync);
+    // 粘贴只保留纯文本（防止带入富文本样式）；回车视为确认并失焦
+    b.addEventListener("paste", (e) => {
+      e.preventDefault();
+      const t = (e.clipboardData || window.clipboardData).getData("text/plain");
+      document.execCommand("insertText", false, t);
+    });
+    b.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); b.blur(); } });
   });
 
   // 替换图片
