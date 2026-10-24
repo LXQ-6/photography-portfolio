@@ -113,7 +113,6 @@ window.GALLERY_API_URL = "/api/photos";
       .map((seg, i) => `<span class="hl" style="animation-delay:${(.15 + i * .18).toFixed(2)}s">${seg}</span>`)
       .join("<br>");
     $("hero-en").textContent = hero.en || "PHOTOGRAPHY PORTFOLIO";
-    $("hero-side").textContent = hero.en || "PHOTOGRAPHY PORTFOLIO";   // 封面左侧竖排英文
     $("hero-sub").textContent = hero.bio || site.description || "";
 
     /* Hero meta：作品数 / 分类数（自动统计） */
