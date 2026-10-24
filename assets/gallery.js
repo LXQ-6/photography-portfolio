@@ -410,6 +410,43 @@ window.GALLERY_API_URL = "/api/photos";
     stage.addEventListener("gesturestart", (e) => e.preventDefault());
   }
 
+  /* ---------- 进场加载进度 ---------- */
+  function runLoader() {
+    const loader = $("loader");
+    if (!loader) return;
+    const logo = $("loader-logo"), bar = $("loader-bar"), pct = $("loader-pct");
+    if (logo) logo.textContent = site.title || "拾光影集";
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      loader.classList.add("done");              // 淡出（CSS 过渡）
+      setTimeout(() => loader.remove(), 1000);   // 动画结束后移除节点
+    };
+    // 统计需要装载的图：封面 + 每幅作品的预览图（缺预览图则用原图）
+    const hero = site.hero || {};
+    const heroPhoto = photos.find(p => p.src === hero.src);
+    const heroUrl = hero.preview || (heroPhoto && heroPhoto.preview) || hero.src ||
+      (photos[0] && (photos[0].preview || photos[0].src));
+    const urls = [...new Set([heroUrl, ...photos.map(p => p.preview || p.src)].filter(Boolean))];
+    if (!urls.length) { finish(); return; }
+    let loaded = 0;
+    const tick = () => {
+      loaded++;
+      const r = Math.round((loaded / urls.length) * 100);
+      bar.style.width = r + "%";
+      pct.textContent = r + "%";
+      if (loaded >= urls.length) finish();
+    };
+    urls.forEach(u => {
+      const im = new Image();
+      im.onload = tick;
+      im.onerror = tick;   // 单张失败也计入进度，进度条不会卡死
+      im.src = u;
+    });
+    setTimeout(finish, 20000);   // 兜底：最多等 20 秒，之后照常进入（图片后台继续装载）
+  }
+
   /* ---------- 启动 ---------- */
   async function loadData() {
     if (window.GALLERY_USE_API) {
@@ -432,7 +469,10 @@ window.GALLERY_API_URL = "/api/photos";
     bindNav();
     bindLightbox();
     observeReveals();
+    runLoader();
   }).catch(err => {
     console.error("画廊数据加载失败：", err);
+    const loader = $("loader");
+    if (loader) loader.classList.add("done");   // 出错也要放行，不把访客挡在加载页
   });
 })();
