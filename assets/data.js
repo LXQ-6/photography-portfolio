@@ -8,12 +8,12 @@ window.GALLERY_DATA = {
     "title": "拾光影集",
     "description": "用快门收藏时间——山野、街巷与人间的光。",
     "hero": {
-      "src": "photos/01-dawn-ridges.jpg",
+      "src": "photos/1792865393651-1iszmu.jpg",
       "enShort": "GALLERY",
       "line": "快门按下的那一刻\n便是永恒",
       "en": "PHOTOGRAPHY PORTFOLIO",
       "bio": "时间停止本是神迹，而摄影却让凡人得以掌握这般神技。",
-      "preview": ""
+      "preview": "photos/p1792865394136-i4e2uz.jpg"
     },
     "statement": {
       "lead": "时间的流动不可逆，但照片却能留下<i>时光的一角</i>。当你攀上一座高峰，拍下一张属于自己的照片，许多年过后，每当拿起那张照片，都像是重新站回了那座山上。"
