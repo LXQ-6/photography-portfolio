@@ -124,6 +124,7 @@ window.GALLERY_API_URL = "/api/photos";
     const heroBg = $("hero-bg");
     const heroPhoto = photos.find(p => p.src === hero.src);
     heroBg.src = hero.preview || (heroPhoto && heroPhoto.preview) || hero.src || (photos[0] && (photos[0].preview || photos[0].src)) || "";
+    heroBg.style.objectPosition = hero.pos || "50% 50%";   // 封面取景（管理页可拖动调整）
     heroBg.alt = title;
 
     /* 引言 */

@@ -75,6 +75,16 @@ details.help ol{margin:.6rem 0 .6rem 1.2em;line-height:2}
 .grid .wide{grid-column:1/-1}
 .file-note{font-size:.76rem;color:var(--accent);margin-top:.3rem}
 .pending-img{max-width:100%;max-height:180px;border:1px solid var(--line);margin-top:.5rem}
+/* 封面取景预览（拖动选择封面显示区域） */
+.hero-pos-box{position:relative;overflow:hidden;background:var(--bg-soft);border:1px solid var(--line);border-radius:2px;aspect-ratio:16/9;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;margin-top:.5rem}
+.hero-pos-box:active{cursor:grabbing}
+.hero-pos-box img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.hero-pos-box.mobile{aspect-ratio:9/16;max-width:250px}
+.hero-pos-ctrl{display:flex;gap:.7rem;align-items:center;margin-top:.5rem;font-size:.76rem;color:var(--ink-faint);flex-wrap:wrap}
+.hero-pos-ctrl .ratio-btns{display:flex;gap:.4rem}
+.hero-pos-ctrl button{padding:.22rem .65rem;font-size:.74rem;letter-spacing:.1em}
+.hero-pos-ctrl .ratio-btns button.on{border-color:var(--accent);color:var(--accent)}
+.hero-pos-val{letter-spacing:.06em}
 
 /* 操作条 */
 .actions{position:sticky;bottom:0;background:var(--glass-bg);
@@ -180,6 +190,18 @@ details.help ol{margin:.6rem 0 .6rem 1.2em;line-height:2}
         <img id="site-hero-preview" class="pending-img" alt="" hidden>
         <p class="file-note" id="site-hero-note">从上方选择已上传作品，或上传任意新图作为封面（保存时上传）</p>
       </div>
+    </div>
+    <label class="f">封面取景（按住图片拖动，选择封面显示的区域）</label>
+    <div class="hero-pos-box" id="hero-pos-box">
+      <img id="hero-pos-img" alt="封面取景预览" draggable="false">
+    </div>
+    <div class="hero-pos-ctrl">
+      <span class="ratio-btns">
+        <button type="button" id="ratio-desktop" class="on">电脑预览</button>
+        <button type="button" id="ratio-mobile">手机预览</button>
+      </span>
+      <span class="hero-pos-val" id="hero-pos-val"></span>
+      <button type="button" id="hero-pos-reset">恢复居中</button>
     </div>
     <label class="f">封面简介（标题下的一行字）</label>
     <textarea id="site-bio"></textarea>
@@ -549,6 +571,7 @@ $("site-hero-file").addEventListener("change", async () => {
     opt.textContent = "新上传的封面（保存时上传）";
     sel.insertBefore(opt, sel.firstChild);
     sel.value = "__pending__";
+    refreshHeroPosImg();
   } catch (e) {
     pendingHero = null;
     $("site-hero-preview").hidden = true;
@@ -562,6 +585,72 @@ $("site-hero").addEventListener("change", () => {
     $("site-hero-note").textContent = "从上方选择已上传作品，或上传任意新图作为封面（保存时上传）";
   }
 });
+
+/* ---------- 封面取景：拖动选择封面显示区域 ---------- */
+let heroPos = { x: 50, y: 50 };   // object-position 百分比（50/50 = 居中）
+function heroPreviewUrl() {
+  const selVal = $("site-hero").value;
+  if (selVal === "__pending__" && pendingHero) return pendingHero.dataUrl || "";
+  const p = photos.find(x => x.src === selVal);
+  return p ? (p.preview || p.src || "") : "";
+}
+function applyHeroPos() {
+  const img = $("hero-pos-img");
+  if (img) img.style.objectPosition = heroPos.x.toFixed(1) + "% " + heroPos.y.toFixed(1) + "%";
+  const val = $("hero-pos-val");
+  if (val) val.textContent = "取景位置 " + Math.round(heroPos.x) + "% , " + Math.round(heroPos.y) + "%";
+}
+function refreshHeroPosImg() {
+  const img = $("hero-pos-img");
+  if (!img) return;
+  const url = heroPreviewUrl();
+  if (url) {
+    if (img.getAttribute("src") !== url) img.src = url;
+  } else {
+    img.removeAttribute("src");
+  }
+  applyHeroPos();
+}
+(function bindHeroPos() {
+  const box = $("hero-pos-box"), img = $("hero-pos-img");
+  if (!box || !img) return;
+  let drag = null;
+  const setPos = (x, y) => {
+    heroPos.x = Math.min(100, Math.max(0, x));
+    heroPos.y = Math.min(100, Math.max(0, y));
+    applyHeroPos();
+  };
+  box.addEventListener("pointerdown", (e) => {
+    drag = { x: e.clientX, y: e.clientY, px: heroPos.x, py: heroPos.y };
+    try { box.setPointerCapture(e.pointerId); } catch (_) {}
+    e.preventDefault();
+  });
+  box.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    const natW = img.naturalWidth, natH = img.naturalHeight;
+    if (!natW || !natH) return;
+    const rect = box.getBoundingClientRect();
+    // 与 object-fit:cover 的实际渲染一致：object-position X% ⇔ 图片水平偏移 = -overX * X/100
+    const scale = Math.max(rect.width / natW, rect.height / natH);
+    const overX = natW * scale - rect.width, overY = natH * scale - rect.height;
+    const nx = overX > 0 ? drag.px - (e.clientX - drag.x) / overX * 100 : 50;
+    const ny = overY > 0 ? drag.py - (e.clientY - drag.y) / overY * 100 : 50;
+    setPos(nx, ny);
+  });
+  const end = () => { drag = null; };
+  box.addEventListener("pointerup", end);
+  box.addEventListener("pointercancel", end);
+  $("hero-pos-reset").addEventListener("click", () => setPos(50, 50));
+  $("ratio-desktop").addEventListener("click", () => {
+    box.classList.remove("mobile");
+    $("ratio-desktop").classList.add("on"); $("ratio-mobile").classList.remove("on");
+  });
+  $("ratio-mobile").addEventListener("click", () => {
+    box.classList.add("mobile");
+    $("ratio-mobile").classList.add("on"); $("ratio-desktop").classList.remove("on");
+  });
+  $("site-hero").addEventListener("change", refreshHeroPosImg);
+})();
 function renderSiteForm() {
   if (!siteCopy) return;
   pendingHero = null;
@@ -583,6 +672,11 @@ function renderSiteForm() {
   sel.innerHTML = hero.src && !photos.some(p => p.src === hero.src)
     ? `<option value="${hero.src}" selected>${hero.src}（当前）</option>` + opts
     : opts;
+  // 封面取景：解析 hero.pos（"30% 70%"），缺省居中
+  const pm = String(hero.pos || "").match(/([\d.]+)%\s+([\d.]+)%/);
+  heroPos.x = pm ? Math.min(100, Math.max(0, +pm[1])) : 50;
+  heroPos.y = pm ? Math.min(100, Math.max(0, +pm[2])) : 50;
+  refreshHeroPosImg();
 }
 $("btn-site").addEventListener("click", async () => {
   if (!token || !siteCopy) return setStatus($("site-status"), "请先连接 GitHub", "err");
@@ -597,6 +691,7 @@ $("btn-site").addEventListener("click", async () => {
     siteCopy.hero.line = $("site-line").value.replace(/\r/g, "");
     siteCopy.hero.en = $("site-en").value.trim();
     siteCopy.hero.bio = $("site-bio").value.trim();
+    siteCopy.hero.pos = heroPos.x.toFixed(1) + "% " + heroPos.y.toFixed(1) + "%";   // 封面取景位置
     siteCopy.statement = siteCopy.statement || {};
     siteCopy.statement.lead = $("site-lead").value;
     siteCopy.about = siteCopy.about || {};
