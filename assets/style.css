@@ -340,17 +340,36 @@ footer .f-copy{letter-spacing:.2em}
   transition:opacity .9s var(--ease),visibility .9s var(--ease);
 }
 .loader.done{opacity:0;visibility:hidden;pointer-events:none}
-.loader-box{display:flex;flex-direction:column;align-items:center;gap:1.05rem;text-align:center}
+.loader-box{display:flex;flex-direction:column;align-items:center;gap:1.3rem;text-align:center}
 .loader-logo{
   font-family:var(--serif);font-weight:600;font-size:1.3rem;
   letter-spacing:.5em;text-indent:.5em;color:var(--ink);
   animation:loaderBreath 2.6s ease-in-out infinite;
 }
 .loader-en{font-size:.62rem;letter-spacing:.42em;text-indent:.42em;color:var(--accent)}
-.loader-bar{width:min(14.4rem,58vw);height:1px;background:var(--line);overflow:hidden}
-.loader-bar span{display:block;height:100%;width:0;background:var(--accent);transition:width .4s var(--ease)}
-.loader-pct{font-size:.72rem;letter-spacing:.24em;text-indent:.24em;color:var(--ink-faint);font-variant-numeric:tabular-nums}
+.loader-bar{position:relative;width:min(16rem,64vw);height:2px;background:var(--line);border-radius:2px;overflow:hidden}
+.loader-bar span{display:block;height:100%;width:0;position:relative;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent))}
+/* 前沿流动微光：填充的右端持续有一道亮光掠过（显影感） */
+.loader-bar span::after{
+  content:"";position:absolute;top:0;right:0;width:2.4rem;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.55));
+  animation:loaderSheen 1.5s linear infinite;
+}
+@keyframes loaderSheen{from{transform:translateX(0);opacity:.2}50%{opacity:1}to{transform:translateX(2.4rem);opacity:.2}}
+.loader-meta{display:flex;align-items:baseline;gap:1rem}
+.loader-pct{font-family:var(--serif);font-weight:400;font-size:2rem;line-height:1;
+  color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.loader-pct b{font-weight:400}
+.loader-pct i{font-style:normal;font-size:.8rem;color:var(--accent);margin-left:.12em}
+.loader-count{font-size:.68rem;letter-spacing:.22em;color:var(--ink-faint);font-variant-numeric:tabular-nums}
+.loader-status{font-size:.66rem;letter-spacing:.4em;text-indent:.4em;color:var(--accent);
+  opacity:.85;animation:loaderBreath 2.6s ease-in-out infinite}
 @keyframes loaderBreath{0%,100%{opacity:.5}50%{opacity:1}}
+@media(prefers-reduced-motion:reduce){
+  .loader-bar span::after{animation:none}
+  .loader-logo,.loader-status{animation:none}
+}
 
 /* ---------- 大屏增强：2.5K / 4K 显示器按比例放大（手机与普通屏不受影响） ---------- */
 /* 全站尺寸基本为 rem/clamp 单位，放大根字号即整体等比缩放 */

@@ -416,38 +416,56 @@ window.GALLERY_API_URL = "/api/photos";
     stage.addEventListener("gesturestart", (e) => e.preventDefault());
   }
 
-  /* ---------- 进场加载进度 ---------- */
+  /* ---------- 进场加载进度：全部图片（含封面原图）装载完成才放行 ---------- */
   function runLoader() {
     const loader = $("loader");
     if (!loader) return;
-    const logo = $("loader-logo"), bar = $("loader-bar"), pct = $("loader-pct");
+    const bar = $("loader-bar"), num = $("loader-num"), count = $("loader-count"), status = $("loader-status");
+    const logo = $("loader-logo");
     if (logo) logo.textContent = site.title || "拾光影集";
-    let done = false;
     const finish = () => {
-      if (done) return;
-      done = true;
       loader.classList.add("done");              // 淡出（CSS 过渡）
       setTimeout(() => loader.remove(), 1000);   // 动画结束后移除节点
     };
-    // 统计需要装载的图：每幅作品的预览图（缺预览图则用原图）。
-    // 封面已改为原图直出（原图可能几十 MB），不阻塞进场，由浏览器后台自行装载
-    const urls = [...new Set(photos.map(p => p.preview || p.src))].filter(Boolean);
+    // 统计需要装载的图：封面原图 + 每幅作品的预览图（缺预览图则用原图）
+    // 全部装载完成后才放行进入；封面原图较大时会稍作等待
+    const hero = site.hero || {};
+    const heroPhoto = photos.find(p => p.src === hero.src);
+    const heroUrl = hero.src || (heroPhoto && heroPhoto.src) || hero.preview ||
+      (photos[0] && (photos[0].src || photos[0].preview));
+    const urls = [...new Set([heroUrl, ...photos.map(p => p.preview || p.src)].filter(Boolean))];
     if (!urls.length) { finish(); return; }
-    let loaded = 0;
+    const total = urls.length;
+    if (count) count.textContent = "0 / " + total + " 帧";
+    let loaded = 0, shown = 0, settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      if (status) status.textContent = "显影完成";
+      if (num) num.textContent = "100";
+      bar.style.width = "100%";
+      setTimeout(finish, 600);   // 满格后停留一瞬再淡出
+    };
     const tick = () => {
       loaded++;
-      const r = Math.round((loaded / urls.length) * 100);
-      bar.style.width = r + "%";
-      pct.textContent = r + "%";
-      if (loaded >= urls.length) finish();
+      if (count) count.textContent = loaded + " / " + total + " 帧";
+      if (loaded >= total) settle();
     };
     urls.forEach(u => {
       const im = new Image();
       im.onload = tick;
-      im.onerror = tick;   // 单张失败也计入进度，进度条不会卡死
+      im.onerror = tick;   // 单张失败也计入，进度不会卡死
       im.src = u;
     });
-    setTimeout(finish, 20000);   // 兜底：最多等 20 秒，之后照常进入（图片后台继续装载）
+    const loop = () => {
+      const target = (loaded / total) * 100;
+      shown += (target - shown) * 0.16;            // 缓动计数：数字与进度条流动而非跳变
+      if (target - shown < 0.05) shown = target;
+      bar.style.width = shown + "%";
+      if (num) num.textContent = Math.round(shown);
+      if (!(settled && shown >= 100)) requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
   }
 
   /* ---------- 启动 ---------- */

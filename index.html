@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=15">
+<link rel="stylesheet" href="assets/style.css?v=16">
 </head>
 <body>
 
@@ -30,9 +30,13 @@
 <div class="loader" id="loader" role="status" aria-label="正在装载作品">
   <div class="loader-box">
     <span class="loader-logo" id="loader-logo">拾光影集</span>
-    <span class="loader-en">LOADING</span>
+    <span class="loader-en">DEVELOPING</span>
     <div class="loader-bar"><span id="loader-bar"></span></div>
-    <span class="loader-pct" id="loader-pct">0%</span>
+    <div class="loader-meta">
+      <span class="loader-pct"><b id="loader-num">0</b><i>%</i></span>
+      <span class="loader-count" id="loader-count">0 / 0 帧</span>
+    </div>
+    <span class="loader-status" id="loader-status">正在显影</span>
   </div>
 </div>
 
@@ -155,7 +159,7 @@
 -->
 <script src="assets/data.js?v=14"></script>
 <script src="assets/photos-data.js?v=13"></script>
-<script src="assets/gallery.js?v=16"></script>
+<script src="assets/gallery.js?v=17"></script>
 <!-- PWA：注册 Service Worker（离线兜底 + 可安装到主屏幕） -->
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
