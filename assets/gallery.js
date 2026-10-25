@@ -120,10 +120,16 @@ window.GALLERY_API_URL = "/api/photos";
       `<span>收录 <b>${photos.length} 帧</b></span>` +
       `<span>创作方向 <b>${categories().length} 类</b></span>`;
 
-    /* 封面大图：优先独立封面的预览图 → 所选作品的预览图 → 原图 */
+    /* 封面大图：原图直出（不压缩）→ 预览图兜底 */
     const heroBg = $("hero-bg");
     const heroPhoto = photos.find(p => p.src === hero.src);
-    heroBg.src = hero.preview || (heroPhoto && heroPhoto.preview) || hero.src || (photos[0] && (photos[0].preview || photos[0].src)) || "";
+    const heroFallback = hero.preview || (heroPhoto && heroPhoto.preview) || (photos[0] && (photos[0].preview || photos[0].src)) || "";
+    // 封面原图直出（不压缩），仅在原图缺失/装载失败时退回预览图
+    heroBg.src = hero.src || (heroPhoto && heroPhoto.src) || heroFallback;
+    heroBg.onerror = () => {
+      heroBg.onerror = null;
+      if (heroFallback && heroBg.src.split("/").pop() !== heroFallback.split("/").pop()) heroBg.src = heroFallback;
+    };
     heroBg.style.objectPosition = hero.pos || "50% 50%";   // 封面取景（管理页可拖动调整）
     heroBg.alt = title;
 
@@ -423,12 +429,9 @@ window.GALLERY_API_URL = "/api/photos";
       loader.classList.add("done");              // 淡出（CSS 过渡）
       setTimeout(() => loader.remove(), 1000);   // 动画结束后移除节点
     };
-    // 统计需要装载的图：封面 + 每幅作品的预览图（缺预览图则用原图）
-    const hero = site.hero || {};
-    const heroPhoto = photos.find(p => p.src === hero.src);
-    const heroUrl = hero.preview || (heroPhoto && heroPhoto.preview) || hero.src ||
-      (photos[0] && (photos[0].preview || photos[0].src));
-    const urls = [...new Set([heroUrl, ...photos.map(p => p.preview || p.src)].filter(Boolean))];
+    // 统计需要装载的图：每幅作品的预览图（缺预览图则用原图）。
+    // 封面已改为原图直出（原图可能几十 MB），不阻塞进场，由浏览器后台自行装载
+    const urls = [...new Set(photos.map(p => p.preview || p.src))].filter(Boolean);
     if (!urls.length) { finish(); return; }
     let loaded = 0;
     const tick = () => {
