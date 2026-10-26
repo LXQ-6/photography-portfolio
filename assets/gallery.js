@@ -265,6 +265,15 @@ window.GALLERY_API_URL = "/api/photos";
   }
 
   /* ---------- 大图浏览（原图无损 + 1:1 缩放 + 下载） ---------- */
+  // 沉浸模式：2.8 秒无操作自动隐藏上下工具条，动一下鼠标/触摸即恢复
+  let idleTimer = null;
+  function wakeLightbox() {
+    const lb = $("lightbox");
+    lb.classList.remove("idle");
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => lb.classList.add("idle"), 2800);
+  }
+
   function openLightbox(p) {
     // 与筛选状态对齐：灯箱序列 = 当前可见的作品
     const shown = activeCategory === "全部" ? photos : photos.filter(x => x.category === activeCategory);
@@ -273,6 +282,7 @@ window.GALLERY_API_URL = "/api/photos";
     lastFocus = document.activeElement;
     $("lightbox").classList.add("open");
     document.body.style.overflow = "hidden";
+    wakeLightbox();                     // 打开即启动沉浸计时：无操作 2.8s 后工具条自动隐藏
     renderLightbox();
     $("lb-close").focus();
   }
@@ -331,15 +341,9 @@ window.GALLERY_API_URL = "/api/photos";
     // 新图加载完成后淡入
     $("lb-img").addEventListener("load", () => $("lb-img").classList.add("fade"));
 
-    // 沉浸模式：2.8 秒无操作自动隐藏上下工具条，动一下鼠标/触摸即恢复
+    // 沉浸模式：无操作 2.8 秒自动隐藏上下工具条（计时在 openLightbox 时启动）
     const lb = $("lightbox");
-    let idleTimer = null;
-    const wake = () => {
-      lb.classList.remove("idle");
-      clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => lb.classList.add("idle"), 2800);
-    };
-    ["mousemove", "touchstart", "keydown"].forEach(ev => lb.addEventListener(ev, wake, { passive: true }));
+    ["mousemove", "touchstart", "keydown"].forEach(ev => lb.addEventListener(ev, wakeLightbox, { passive: true }));
     lb.addEventListener("mouseleave", () => lb.classList.add("idle"));
     // 点击图片：以点击位置为中心放大到 1:1 原图（再次点击还原）
     $("lb-img").addEventListener("click", (e) => {

@@ -68,8 +68,13 @@ html{scrollbar-width:thin;scrollbar-color:#3a322a var(--bg)}
 .nav.scrolled{
   background:var(--glass-bg);
   -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
-  border-bottom-color:var(--glass-line);
+  border-bottom-color:transparent;
   box-shadow:inset 0 1px 0 var(--glass-hi);
+}
+/* 滚动边缘效果：分割线两端渐隐，替代生硬的整条边框 */
+.nav.scrolled::after{
+  content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--glass-line) 15%,var(--glass-line) 85%,transparent);
 }
 .nav .logo{font-family:var(--serif);font-size:1.05rem;font-weight:600;letter-spacing:.28em}
 .nav .logo span{color:var(--accent);margin-left:.5em;font-size:.72rem;letter-spacing:.22em;font-weight:400}
@@ -137,8 +142,12 @@ section{padding:clamp(4rem,10vh,7.5rem) clamp(1.2rem,4vw,3.2rem)}
   padding:1rem clamp(1.2rem,4vw,3.2rem);margin-left:calc(-1 * clamp(1.2rem,4vw,3.2rem));margin-right:calc(-1 * clamp(1.2rem,4vw,3.2rem));
   background:var(--glass-bg);
   -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
-  border-bottom:1px solid var(--glass-line);
   box-shadow:inset 0 1px 0 var(--glass-hi)}
+/* 滚动边缘效果：底部分割线两端渐隐 */
+.filters::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--glass-line) 12%,var(--glass-line) 88%,transparent);
+}
 #filter-bar{display:flex;flex-wrap:wrap;gap:.5rem}
 .filters button{
   background:transparent;border:1px solid var(--line);color:var(--ink-dim);
@@ -146,6 +155,8 @@ section{padding:clamp(4rem,10vh,7.5rem) clamp(1.2rem,4vw,3.2rem)}
   transition:all .3s var(--ease);
 }
 .filters button:hover{border-color:var(--line-strong);color:var(--ink)}
+/* 触压即反馈：按下立刻缩放，不等松手 */
+.filters button:active{transform:scale(.95);transition-duration:.1s}
 .filters button[aria-pressed="true"]{background:var(--ink);color:#1a150f;border-color:var(--ink);font-weight:500}
 .filters .count{font-size:.7rem;color:var(--ink-faint);align-self:center;margin-left:auto;letter-spacing:.2em}
 @media(max-width:640px){.filters{position:static;background:none;backdrop-filter:none;margin-left:0;margin-right:0;padding:0 0 1.4rem}}
@@ -257,6 +268,14 @@ footer .f-copy{letter-spacing:.2em}
 }
 .lightbox.open{display:block;animation:lbIn .35s var(--ease)}
 @keyframes lbIn{from{opacity:0}to{opacity:1}}
+/* 材质感入场：玻璃条从各自边缘滑到位、按钮缩放浮现（材质到达，而非整层淡入）。
+   :not(.idle) —— 沉浸模式加类后动画停止作用，交还给过渡规则，idle 淡出不冲突 */
+.lightbox.open:not(.idle) .lb-top{animation:barTopIn .5s var(--ease) both}
+.lightbox.open:not(.idle) .lb-cap{animation:barBotIn .5s var(--ease) both}
+.lightbox.open:not(.idle) .lb-btn{animation:barBtnIn .5s var(--ease) .06s both}
+@keyframes barTopIn{from{opacity:0;transform:translateY(-100%)}to{opacity:1;transform:none}}
+@keyframes barBotIn{from{opacity:0;transform:translateY(100%)}to{opacity:1;transform:none}}
+@keyframes barBtnIn{from{opacity:0;transform:translateY(-50%) scale(.86)}to{opacity:1;transform:translateY(-50%) scale(1)}}
 /* 顶/底玻璃条：悬浮在照片上，透出照片颜色 */
 .lb-top{
   position:absolute;top:0;left:0;right:0;z-index:5;
@@ -277,6 +296,7 @@ footer .f-copy{letter-spacing:.2em}
   box-shadow:inset 0 1px 0 var(--glass-hi);
 }
 .lb-close:hover{background:var(--ink);color:#1a150f}
+.lb-close:active{transform:scale(.9);transition-duration:.1s}
 /* 沉浸模式：无操作时隐藏工具条与切换按钮 */
 .lightbox .lb-top,.lightbox .lb-cap,.lightbox .lb-btn{transition:opacity .45s var(--ease),background .3s,color .3s,border-color .3s}
 .lightbox.idle .lb-top,.lightbox.idle .lb-cap,.lightbox.idle .lb-btn{opacity:0;pointer-events:none}
@@ -302,6 +322,7 @@ footer .f-copy{letter-spacing:.2em}
   box-shadow:inset 0 1px 0 var(--glass-hi);
 }
 .lb-btn:hover{background:var(--ink);color:#1a150f}
+.lb-btn:active{transform:translateY(-50%) scale(.9);transition-duration:.1s}
 .lb-prev{left:clamp(.7rem,2vw,1.6rem)}
 .lb-next{right:clamp(.7rem,2vw,1.6rem)}
 .lb-cap{
@@ -321,6 +342,7 @@ footer .f-copy{letter-spacing:.2em}
   transition:all .3s var(--ease);
 }
 .lb-cap .dl:hover{background:var(--accent);border-color:var(--accent);color:#1a150f}
+.lb-cap .dl:active{transform:scale(.95);transition-duration:.1s}
 @media(max-width:640px){.lb-stage{padding:3.4rem 3.2rem 4.6rem}.lb-btn{width:2.4rem;height:2.4rem}.lb-top .lb-title{display:none}.lb-cap .exif{display:none}}
 
 /* ---------- 入场动效 ---------- */
@@ -369,6 +391,19 @@ footer .f-copy{letter-spacing:.2em}
 @media(prefers-reduced-motion:reduce){
   .loader-bar span::after{animation:none}
   .loader-logo,.loader-status{animation:none}
+}
+/* 系统级"降低透明度"：玻璃面转为实底，保可读性 */
+@media(prefers-reduced-transparency:reduce){
+  .nav.scrolled,.filters,.float-nav,.lb-top,.lb-cap,.lb-close,.lb-btn{
+    background:var(--bg-raise);
+    -webkit-backdrop-filter:none;backdrop-filter:none;
+  }
+  .lightbox{background:#12100d}
+}
+/* 系统级"提高对比度"：分割线与描边加重 */
+@media(prefers-contrast:more){
+  .nav.scrolled::after,.filters::after{background:var(--line-strong)}
+  .filters button,.float-nav,.lb-close,.lb-btn{border-color:var(--line-strong)}
 }
 
 /* ---------- 大屏增强：2.5K / 4K 显示器按比例放大（手机与普通屏不受影响） ---------- */
