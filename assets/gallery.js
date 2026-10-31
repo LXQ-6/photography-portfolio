@@ -120,18 +120,20 @@ window.GALLERY_API_URL = "/api/photos";
       `<span>收录 <b>${photos.length} 帧</b></span>` +
       `<span>创作方向 <b>${categories().length} 类</b></span>`;
 
-    /* 封面大图：原图直出（不压缩）→ 预览图兜底 */
+    /* 封面：预览图先行秒开，原图后台就绪后无缝替换（decode 完成再切换，不闪烁） */
     const heroBg = $("hero-bg");
     const heroPhoto = photos.find(p => p.src === hero.src);
-    const heroFallback = hero.preview || (heroPhoto && heroPhoto.preview) || (photos[0] && (photos[0].preview || photos[0].src)) || "";
-    // 封面原图直出（不压缩），仅在原图缺失/装载失败时退回预览图
-    heroBg.src = hero.src || (heroPhoto && heroPhoto.src) || heroFallback;
-    heroBg.onerror = () => {
-      heroBg.onerror = null;
-      if (heroFallback && heroBg.src.split("/").pop() !== heroFallback.split("/").pop()) heroBg.src = heroFallback;
-    };
+    const heroPreview = hero.preview || (heroPhoto && heroPhoto.preview) || (photos[0] && photos[0].preview) || "";
+    const heroOrig = hero.src || (heroPhoto && heroPhoto.src) || "";
+    heroBg.src = heroPreview || heroOrig || "";
     heroBg.style.objectPosition = hero.pos || "50% 50%";   // 封面取景（管理页可拖动调整）
     heroBg.alt = title;
+    if (heroOrig && heroOrig !== heroBg.getAttribute("src")) {
+      const hi = new Image();
+      hi.src = heroOrig;
+      const swap = () => { heroBg.src = heroOrig; };
+      if (hi.decode) hi.decode().then(swap).catch(() => {}); else hi.onload = swap;
+    }
 
     /* 引言 */
     const st = site.statement || {};
@@ -254,7 +256,12 @@ window.GALLERY_API_URL = "/api/photos";
     const show = () => img.classList.add("loaded");
     img.addEventListener("load", show);
     if (img.complete && img.naturalWidth > 0) show();
-    img.addEventListener("error", () => { img.classList.add("loaded"); img.style.minHeight = "220px"; });
+    img.addEventListener("error", () => {
+      // 网络抖动兜底：失败 1.2 秒后自动重试一次（换缓存键绕过失败请求）
+      if (img.dataset.retried) { img.classList.add("loaded"); img.style.minHeight = "220px"; return; }
+      img.dataset.retried = "1";
+      setTimeout(() => { img.src = img.src.split("?")[0] + "?r=" + Date.now(); }, 1200);
+    });
 
     const media = art.querySelector(".proj-media");
     media.addEventListener("click", () => openLightbox(p));
@@ -420,7 +427,7 @@ window.GALLERY_API_URL = "/api/photos";
     stage.addEventListener("gesturestart", (e) => e.preventDefault());
   }
 
-  /* ---------- 进场加载进度：全部图片（含封面原图）装载完成才放行 ---------- */
+  /* ---------- 进场加载进度：全部预览图装载完成才放行 ---------- */
   function runLoader() {
     const loader = $("loader");
     if (!loader) return;
@@ -431,12 +438,12 @@ window.GALLERY_API_URL = "/api/photos";
       loader.classList.add("done");              // 淡出（CSS 过渡）
       setTimeout(() => loader.remove(), 1000);   // 动画结束后移除节点
     };
-    // 统计需要装载的图：封面原图 + 每幅作品的预览图（缺预览图则用原图）
-    // 全部装载完成后才放行进入；封面原图较大时会稍作等待
+    // 统计需要装载的图：封面预览图 + 每幅作品的预览图（缺预览图则用原图）
+    // 全部预览装载完成即放行进入；封面原图体积大（可达几十 MB），改为后台装载、就绪后无缝替换
     const hero = site.hero || {};
     const heroPhoto = photos.find(p => p.src === hero.src);
-    const heroUrl = hero.src || (heroPhoto && heroPhoto.src) || hero.preview ||
-      (photos[0] && (photos[0].src || photos[0].preview));
+    const heroUrl = hero.preview || (heroPhoto && heroPhoto.preview) ||
+      (photos[0] && (photos[0].preview || photos[0].src));
     const urls = [...new Set([heroUrl, ...photos.map(p => p.preview || p.src)].filter(Boolean))];
     if (!urls.length) { finish(); return; }
     const total = urls.length;
